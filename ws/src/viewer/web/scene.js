@@ -50,6 +50,11 @@ async function init(token) {
     box: { dimensions: new Cesium.Cartesian3(3, 1, 0.6), material: Cesium.Color.ORANGE },
   });
 
+  // Right button rotates like the left one (Cesium's default makes it zoom); the wheel zooms.
+  const ctl = viewer.scene.screenSpaceCameraController;
+  ctl.rotateEventTypes = [Cesium.CameraEventType.LEFT_DRAG, Cesium.CameraEventType.RIGHT_DRAG];
+  ctl.zoomEventTypes = [Cesium.CameraEventType.WHEEL, Cesium.CameraEventType.PINCH];
+
   const tip = document.getElementById("tip");
   const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
   handler.setInputAction(m => { const p = nearestPathPoint(m.position); if (p) console.log("SEEK " + p.t); },

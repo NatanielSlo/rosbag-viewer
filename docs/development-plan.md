@@ -70,7 +70,7 @@ app opens a bag (`scripts/dev run demo/gps_circle`, or Ctrl+O; make an outdoor-s
 chips and drone selector, the CesiumJS map filling the window, a floating telemetry panel,
 view controls and a docked timeline with flight-mode bands, click/drag seek and hover time.
 Done: transport (Space, J/K/L, Shift+,/., Home/End, +/-), view keys (arrows/WASD, Q/E, PgUp/PgDn,
-F/T/R/Z with animated flights). Follow mode: the camera chases the drone; left- or right-drag rotates the
+F/T/R/Z with animated flights). Free camera: left or right drag rotates, middle drag tilts, wheel zooms. Follow mode: the camera chases the drone; left- or right-drag rotates the
 chase angle, wheel/pinch/PgUp/PgDn/+/- zoom and Q/E rotate, all without leaving follow; panning (arrows/WASD),
 middle drag, Top, Reset, Whole flight or pressing Follow again stop following (the Follow button shows the state), click the path to seek, path tooltip, the `?`
 overlay, Tab for drones. Code: `src/app/replaycontroller.*`, `web/scene.js`, `qml/Main.qml`.
