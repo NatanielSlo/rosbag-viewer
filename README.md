@@ -10,9 +10,11 @@ replays the mission. It works with any bag, and with one or more drones per bag.
 telemetry are separate parts of the team's ground control station, built by other team members.
 
 **Status:** early development (see [docs/development-plan.md](docs/development-plan.md)).
-Step 0 (dev container, app skeleton, tests) is done. Step 1 (3D engine prototypes) is in
-progress. In Step 2, the engine-independent core is in place and tested: frame conversions
-(NED/FRD to ENU/FLU, WGS84), `ReplayClock` and the per-drone flight model. Bag reading is next.
+Done: dev container, the engine-independent core (frames, clock, flight model, telemetry), bag
+reading (PX4 and MAVROS, compressed and split bags), and the 3D engine choice (CesiumJS in Qt
+WebEngine, ADR-002). The viewer app now opens a GPS bag and replays it on the 3D map with a
+telemetry panel, timeline and the keyboard map. Next: the local 3D scene for flights without GPS,
+then the instruments (attitude, compass) and the Analysis panel.
 
 | Document | Contents |
 |---|---|
@@ -25,6 +27,6 @@ progress. In Step 2, the engine-independent core is in place and tested: frame c
 container built on the team's onboarding image `base-image:jazzy` (ADR-010).
 
 **Build and run:** build the team image first (`./build_container.sh` in `OpenHORYZN/base_image`),
-then `scripts/dev run`. Other commands: `build`, `test`, `smoke`, `format`, `shell`.
+then `scripts/dev run [bag]` (a rosbag2 folder; or Ctrl+O in the app). Other commands: `build`, `test`, `smoke`, `format`, `shell`.
 
 The earlier Electron/Python prototype is kept at the git tag `prototype-electron`.

@@ -207,3 +207,15 @@ Notes: the prototype read only standard types, because sqlite3 bags do not embed
 `livox_ros_driver2` definitions. The new viewer reads bags with `rosbag2_cpp` and ROS installed
 (ADR-003), so it can decode them, which gives it much richer data than the prototype had (`/mavros/state` for armed/mode,
 `/mavros/statustext/recv`, `/mavros/sys_status`, waypoints and geofence).
+
+## L13. Building the viewer on the map engine (2026-11-15)
+- Qt defines `signals` as a macro: a method named `signals()` breaks every file that includes
+  Qt headers. Avoid `signals`, `slots`, `emit` as identifiers in the model (renamed to `allSignals()`).
+- Headless (`QT_QPA_PLATFORM=offscreen`) can render the Qt Quick UI to a screenshot, but the
+  WebEngine map stays black ("Compositor returned null texture"). The map must be checked in a
+  real window; the smoke test only proves the app starts.
+- Qt Quick Controls need the Fusion style plus an explicit dark palette, otherwise button text is
+  dark on dark. Some Unicode glyphs (⏮ ⏭) are missing in the default font: use words.
+- The web view takes keyboard focus on click, but window-level `Shortcut`s still fire, so the
+  shortcut map works over the map.
+- Keep the map attribution (bottom-left) free: floating panels go top-right and bottom-right only.
