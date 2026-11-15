@@ -3,7 +3,7 @@
 The first rosbag viewer (Electron + Python `rosbags` + three.js/CesiumJS, November 2026)
 is kept in git at tag **`prototype-electron`**: `git checkout prototype-electron`.
 It read every bag in the IMAV-26 set plus a PX4 SITL GPS flight and had 49 passing tests.
-This page keeps what we learned from it, so the GCS does not have to rediscover it.
+This page keeps what we learned from it, so the new viewer does not have to rediscover it.
 The architecture refers to these as L1, L2, …
 
 ---
@@ -25,13 +25,13 @@ The prototype "froze" because every camera frame re-opened the bag (~0.5 s) whil
 for ~16 frames per second; the queue grew without limit and blocked everything else.
 Fix: keep the database connection open, index frame timestamps once, and allow **at most one
 outstanding request per camera, latest wins**.
-→ Same rule in the GCS. With the indexed lookup, a frame took ~0.1 ms once warm.
+→ Same rule in the new viewer. With the indexed lookup, a frame took ~0.1 ms once warm.
 
 ### L4. Topic names differ between bags
 The same signal appears under different names (e.g. flight mode on `/flight_mode`,
 `/drone/flight_mode` and `/diagnostics/flight_mode`). The prototype used a preference list per
 signal: first topic with data wins.
-→ Topic map in YAML, with a preference list per signal (and the interface package going forward).
+→ Topic map in YAML, with a preference list per signal.
 
 ### L5. PX4 (`/fmu/out/*`) specifics
 - NED world / FRD body → ENU / FLU: position `(x, y, z)_ENU = (y, x, -z)_NED`; attitude
@@ -78,7 +78,7 @@ checking for production use.
 
 ### L10. Environment pitfalls
 - Ubuntu 24.04 blocks unprivileged user namespaces through AppArmor, so Chromium-based apps
-  (Electron, and **Qt WebEngine** too, which matters for 3D option C) need either a root-owned
+  (Electron, and **Qt WebEngine** too, which matters for 3D engine option B) need either a root-owned
   SUID `chrome-sandbox` or an AppArmor profile. Ubuntu 22.04 is not affected.
 - `pkill -f server.py` also kills the shell that runs it. Find processes by port (`ss -ltnp`).
 - Headless Firefox hangs on the dev laptop. Use Playwright (or Qt's own test tools) for screenshots.
@@ -99,7 +99,7 @@ checking for production use.
 ## Topic inventory of the team's bags
 
 From 19 bags (IMAV-26 set + PX4 SITL), counting how many bags contain each topic with data.
-Useful when designing `horyzn_interfaces` and the topic map.
+Useful when writing the adapters and `topics.yaml`.
 
 | Bags | Topic | Type |
 |---:|---|---|
@@ -143,6 +143,6 @@ Useful when designing `horyzn_interfaces` and the topic map.
 | 1 | `/mavros/param/event` | mavros_msgs/msg/ParamEvent |
 
 Notes: the prototype read only standard types, because sqlite3 bags do not embed `mavros_msgs` /
-`livox_ros_driver2` definitions. The GCS runs with ROS installed, so it can read them directly,
-which gives it much richer data than the prototype had (`/mavros/state` for armed/mode,
+`livox_ros_driver2` definitions. The new viewer reads bags with `rosbag2_cpp` and ROS installed
+(ADR-003), so it can decode them, which gives it much richer data than the prototype had (`/mavros/state` for armed/mode,
 `/mavros/statustext/recv`, `/mavros/sys_status`, waypoints and geofence).

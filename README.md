@@ -1,20 +1,21 @@
-# HORYZN Ground Control Station
+# 3D Mission Viewer
 
-A native ground control station for our drones, built around **ROS 2**: live monitoring
-(and later commanding) over an IP link, plus replay and analysis of recorded rosbags through
-the same pipeline.
+Shows **completed drone missions in 3D, from rosbag recordings**: the flight path, the drone's
+attitude, flight modes, camera images and detections, either in a local 3D scene (indoor
+flights) or on a photorealistic 3D map (GPS flights), with a timeline to replay the mission.
 
-**Status:** planning. There is no code yet; the architecture is under team review.
+**Scope:** only post-mission 3D visualization from rosbags. Mission planning and live
+telemetry are separate parts of the team's ground control station, built by other team members.
+
+**Status:** planning. No code yet.
 
 | Document | Contents |
 |---|---|
-| [docs/architecture.md](docs/architecture.md) | Goals, technology stack, modules, data link, testing, repo layout |
-| [docs/development-plan.md](docs/development-plan.md) | Milestones M0–M9, first sprint, open questions for the team |
-| [docs/decisions.md](docs/decisions.md) | Architecture decision records (ADR-001 …) |
-| [docs/prototype-lessons.md](docs/prototype-lessons.md) | What the first viewer prototype taught us, plus the topic inventory of our bags |
+| [docs/architecture.md](docs/architecture.md) | Scope, technology stack, structure, 3D engine options, testing |
+| [docs/development-plan.md](docs/development-plan.md) | Steps 0–6, open questions |
+| [docs/decisions.md](docs/decisions.md) | Decision records (ADR-001 …) |
+| [docs/prototype-lessons.md](docs/prototype-lessons.md) | What the first prototype taught us, plus the topic inventory of our bags |
 
-**Target platform:** Ubuntu 22.04, ROS 2 Humble, Qt 6 LTS, C++20
-(see ADR-006 about Humble's end of life in May 2027).
+**Platform:** Ubuntu 22.04, ROS 2 Humble (for reading bags), Qt 6 LTS, C++20.
 
-The previous Electron/Python rosbag viewer prototype is available at the git tag
-`prototype-electron` (`git checkout prototype-electron`).
+The earlier Electron/Python prototype is kept at the git tag `prototype-electron`.

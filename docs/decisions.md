@@ -1,91 +1,59 @@
-# Architecture decisions
+# Decisions: 3D Mission Viewer
 
-Short records of decisions and why they were made. Add new ones at the bottom and never
-rewrite an accepted record: supersede it with a new one instead.
+Short records of decisions and why they were made. Add new ones at the bottom; supersede a
+record instead of rewriting it.
 
-Status values: **Accepted**, **Proposed** (needs team review), **Open** (needs input or a prototype).
+Scope reminder: this project only covers **3D visualization of past missions from rosbags**.
+Pre-mission software and live telemetry belong to other team members and are not decided here.
+
+Status values: **Accepted**, **Proposed** (needs review), **Open** (needs input or a prototype).
 
 ---
 
-## ADR-001: Native Qt/C++ application instead of Electron
+## ADR-001: Native Qt/C++ instead of Electron
 **Status:** Accepted (2026-11-15)
 
-**Context.** The first rosbag viewer was an Electron + Python + three.js/CesiumJS prototype.
-The team is a professional drone company and the long-term goal is a full ground control
-station with a live link. Comparable professional tools (QGroundControl, Auterion Mission
-Control, Mission Planner) are native, and so are the ROS tools (RViz2, rqt, PlotJuggler: Qt).
+**Context.** The first viewer was an Electron + Python + three.js/CesiumJS prototype. The rest
+of the team's GCS is native, and comparable professional tools (QGroundControl, RViz2,
+PlotJuggler) are Qt/C++.
 
-**Decision.** Build the GCS as a native C++20 / Qt 6 (Qt Quick) application. The replay viewer
-becomes the GCS's replay mode, not a separate app.
+**Decision.** Build the viewer in C++20 with Qt 6 (Qt Quick), on the same stack as the rest of
+the GCS, so it can run standalone or be embedded.
 
-**Consequences.** We give up the prototype's code (it is kept at tag `prototype-electron`
-and its lessons are in [prototype-lessons.md](prototype-lessons.md)). Development is slower
-than with web technologies, but there is one stack, one runtime and native performance, and the
-code integrates directly with `rclcpp` and `rosbag2_cpp`.
+**Consequences.** The prototype code is not reused. It is kept at tag `prototype-electron`
+and its lessons are in [prototype-lessons.md](prototype-lessons.md).
 
-## ADR-002: Build our own GCS instead of forking QGroundControl
-**Status:** Accepted (2026-11-15)
+## ADR-002: 3D engine
+**Status:** Open, decided by the 3D prototype (development plan, step 1)
 
-**Context.** QGC (Qt 6, Apache 2.0 / GPLv3) already has mission planning, parameters, video,
-offline maps and multi-vehicle support, but it is built around MAVLink and is a large codebase.
+**Options.** (A) osgEarth + Cesium Native, (B) CesiumJS in Qt WebEngine, (C) Qt Quick 3D +
+Cesium Native (desk study only). Details and criteria: [architecture.md §4](architecture.md#4-3d-engine-options-decided-by-the-prototype-adr-002).
 
-**Decision.** Write our own GCS designed around ROS 2 from day one.
+**Known facts (2026-11).**
+- osgEarth 3.8 (March 2026) supports Cesium ion and Google 3D Tiles through its `osgEarthCesium` node kit.
+- It runs on OpenSceneGraph, which has been in maintenance mode since 2019.
+- Pelican Mapping's newer engine, Rocky (VulkanSceneGraph), has no 3D Tiles support yet.
+- Ubuntu's osgEarth packages are far too old, so it must be built from source.
 
-**Consequences.** Full control over architecture and UX, but every GCS feature has to be built.
-Where QGC's Apache-2.0 code solves a self-contained problem (e.g. tile caching), we may reuse it
-under that licence, with attribution. The development plan orders features so that replay and
-monitoring are useful long before command and mission planning exist.
-
-## ADR-003: ROS 2 over an IP link, bridged with Zenoh
+## ADR-003: Read bags with `rosbag2_cpp`
 **Status:** Proposed
 
-**Context.** The data link will be Wi-Fi, mesh or LTE (IP). Plain DDS over such links
-suffers from discovery traffic, multicast and poor behaviour on lossy links. The drones run
-ROS 2 Humble.
+**Context.** The prototype used the Python `rosbags` library, which needs no ROS install, but
+it could only decode standard ROS types: sqlite3 bags do not contain the definitions of
+`mavros_msgs`, `px4_msgs` or `livox_ros_driver2`.
 
-**Decision.** Run `zenoh-bridge-ros2dds` on each drone and on the GCS. DDS stays local
-to each machine; only allow-listed topics cross the link over Zenoh, under a per-drone
-namespace. Video goes over RTP/GStreamer, not ROS.
+**Decision.** Use `rosbag2_cpp` with ROS 2 Humble installed. All team message packages are then
+available, so the viewer gets richer data (`/mavros/state` for armed and mode,
+`/mavros/statustext/recv`, waypoints).
 
-**Consequences.** Works on Humble and across ROS distributions, which also helps during the
-migration (ADR-006). It adds a process per machine and a bridge configuration that must be
-versioned together with the interface package (ADR-005).
+**Consequences.** Viewer machines need ROS 2 Humble (the team has it everywhere already).
 
-## ADR-004: 3D view engine
-**Status:** Open, decided by the 3D prototype (development plan M1)
+## ADR-004: Ubuntu 22.04 / ROS 2 Humble
+**Status:** Accepted for now; follows the team's migration plan
 
-**Options.** (A) osgEarth + Cesium Native, (B) Qt Quick 3D + Cesium Native, (C) CesiumJS in
-Qt WebEngine. Details and the measurement criteria are in [architecture.md §6](architecture.md#6-3d-view-options-and-prototype-criteria).
+**Context.** The whole infrastructure is on Ubuntu 22.04 with ROS 2 Humble. Humble reaches end
+of life in **May 2027**.
 
-**Known facts (2026-11).** osgEarth 3.8 (March 2026) supports Cesium ion and Google 3D Tiles
-through its `osgEarthCesium` node kit. It runs on OpenSceneGraph, which has been in maintenance
-mode since 2019. Pelican Mapping's newer engine Rocky (VulkanSceneGraph) has no 3D Tiles
-support yet. Ubuntu packages osgEarth 2.10 at best, so it must be built from source.
-
-## ADR-005: Shared interface package between drone and GCS
-**Status:** Proposed
-
-**Context.** Current bags carry detections as JSON inside `std_msgs/String` and flight modes
-as free text (sometimes with status messages appended). Topic names differ between bags.
-
-**Decision.** Create a versioned ROS 2 package (working name `horyzn_interfaces`) with our
-message definitions, canonical topic names, QoS profiles and the Zenoh bridge allow-list.
-Both the drone software and the GCS depend on it.
-
-## ADR-006: Ubuntu 22.04 / ROS 2 Humble now, with a planned migration
-**Status:** Open, needs a team decision
-
-**Context.** The whole infrastructure is on Ubuntu 22.04 with ROS 2 Humble. **Humble reaches
-end of life in May 2027**, and Ubuntu 22.04's standard support ends around the same time.
-A new GCS started in November 2026 will spend most of its life after that date.
-
-**Proposal.**
-1. Target Humble / 22.04 now, because that is what the drones run.
-2. Keep the GCS code distribution-agnostic: use only stable `rclcpp`/`rosbag2_cpp` APIs and
-   build a second CI job against the next LTS from the start.
-3. Plan the fleet migration (drones + GCS) to the next ROS 2 LTS / Ubuntu LTS as its own
-   milestone (development plan M9). The Zenoh bridge (ADR-003) lets mixed-distribution fleets
-   interoperate during the transition.
-
-**Needs from the team.** The target date for the migration, and whether drones and GCS laptops
-migrate together.
+**Decision.** Target Humble / 22.04. Use only stable `rosbag2_cpp` APIs and add a CI build
+against the next ROS 2 LTS, so the viewer moves along whenever the team migrates. The
+viewer must also keep reading bags recorded with Humble after the team migrates.
