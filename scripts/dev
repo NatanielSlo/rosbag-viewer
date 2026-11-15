@@ -18,6 +18,8 @@ if [[ -z "${CESIUM_ION_TOKEN:-}" && -f .env.local ]]; then
   CESIUM_ION_TOKEN=$(sed -n 's/^CESIUM_ION_TOKEN=//p' .env.local | head -1 | tr -d "\"'")
   export CESIUM_ION_TOKEN
 fi
+# osgEarth reads the same ion token under its own name.
+[[ -n "${CESIUM_ION_TOKEN:-}" ]] && export OSGEARTH_CESIUMION_KEY=$CESIUM_ION_TOKEN
 
 image() {
   docker image inspect base-image:jazzy >/dev/null 2>&1 || {
@@ -29,7 +31,7 @@ image() {
 in_container() {
   local args=(--rm -v "$PWD":/workspace -w /workspace --device /dev/dri
               --user "$(id -u):$(id -g)" -e HOME=/tmp/home --group-add video
-              -e CESIUM_ION_TOKEN -e PROTO_SCREENSHOT
+              -e CESIUM_ION_TOKEN -e OSGEARTH_CESIUMION_KEY -e PROTO_SCREENSHOT
               # Chromium's sandbox needs privileges a container does not have (dev only)
               -e QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox)
   [[ -e /dev/dri/renderD128 ]] && args+=(--group-add "$(stat -c %g /dev/dri/renderD128)")
@@ -44,7 +46,9 @@ in_container() {
   docker run "${args[@]}" "$IMAGE" bash -c \
     "mkdir -p /tmp/home && source /opt/ros/jazzy/setup.bash && source /opt/px4_ws/install/setup.bash && $*"
 }
-BUILD='cd ws && colcon build --cmake-args -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
+# Each image gets its own build/install folders, because CMake caches what it found (osgEarth or not).
+SUFFIX=""; [[ "$IMAGE" == *osgearth ]] && SUFFIX=_osg
+BUILD='cd ws && colcon build --build-base build'$SUFFIX' --install-base install'$SUFFIX'  --cmake-args -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
 BIN='ws/install/viewer/lib/viewer/viewer'
 
 case "${1:-}" in
@@ -55,6 +59,7 @@ case "${1:-}" in
   smoke)  in_container "$BUILD && cd /workspace && QT_QPA_PLATFORM=offscreen $BIN --smoke-test" ;;
   proto)  in_container "$BUILD && cd /workspace && ws/src/prototypes/${2:?name}/fetch_cesium.sh && ws/install/${2}/lib/${2}/${2}" ;;
   format) in_container "find ws/src -name '*.cpp' -o -name '*.h' | xargs clang-format -i" ;;
+  exec)   shift; in_container "$*" ;;   # any command, e.g. VIEWER_IMAGE=rosbag-viewer-dev-osgearth scripts/dev exec osgearth_viewer x.earth
   shell)  in_container bash ;;
   *) sed -n '2,10p' "$0"; exit 1 ;;
 esac

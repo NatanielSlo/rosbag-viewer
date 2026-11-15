@@ -1,0 +1,4 @@
+<!-- Fallback when no Cesium ion token is set: an empty globe. -->
+<map name="bare" type="geocentric" version="2">
+  <viewpoint name="Garching" lat="48.2615" long="11.6710" height="500" heading="0" pitch="-35" range="700"/>
+</map>

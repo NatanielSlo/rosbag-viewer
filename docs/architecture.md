@@ -123,7 +123,14 @@ a preference list per signal, because names differ between bags (L4).
   current mode, battery, …) for the views.
 - Internally everything is **ENU metres** relative to the start point, plus WGS84 for flights
   with GPS. Altitudes are converted correctly for the 3D map (ellipsoid vs AMSL, L8).
-- Depends only on QtCore, so it can be unit-tested without UI or ROS.
+- **No data is shown as no data.** `DroneTrack::poseAt(t, maxGap)` interpolates between samples
+  at most `maxGap` seconds apart (default 2 s). Across a longer dropout it holds the nearest
+  sample for up to `maxGap` and then returns nothing, so the UI shows "—" and the path is not
+  drawn as a straight line through a LIO or GPS dropout.
+- Attitudes are interpolated with slerp along the short way (so +170° to -170° passes through 180°).
+- **Heading** (instruments, compass) is degrees clockwise from North in [0, 360). It is derived
+  from the ENU attitude (`heading = pi/2 - yaw_ENU`) in one place, `model/frames.cpp`.
+- Depends only on the standard library (and later QtCore), so it is unit-tested without UI or ROS.
 
 ### 3.4 Views
 

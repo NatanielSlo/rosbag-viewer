@@ -1,0 +1,7 @@
+<!-- Google Photorealistic 3D Tiles through Cesium ion (needs only the ion token). -->
+<map name="google-ion" type="geocentric" version="2">
+  <CesiumNative3DTiles name="Google Photorealistic 3D Tiles">
+    <asset_id>2275207</asset_id>
+  </CesiumNative3DTiles>
+  <viewpoint name="Garching" lat="48.2615" long="11.6710" height="500" heading="0" pitch="-35" range="700"/>
+</map>

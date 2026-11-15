@@ -83,6 +83,31 @@ checking for production use.
 - `pkill -f server.py` also kills the shell that runs it. Find processes by port (`ss -ltnp`).
 - Headless Firefox hangs on the dev laptop. Use Playwright (or Qt's own test tools) for screenshots.
 
+### L12. Engine prototypes: things that cost time (Step 1)
+- **Qt WebEngine in a container:** Chromium's sandbox needs privileges a container does not have,
+  so dev runs use `QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox` (set by `scripts/dev`, dev only).
+- **CesiumJS under Qt:** `file://` pages break Cesium's web workers. Serve the page through a
+  custom URL scheme (`app://`, `QWebEngineUrlSchemeHandler`), which also works offline.
+- **CesiumJS `Viewer` option `globe`:** it takes a `Globe` object or `false`, not `true`. Passing
+  `true` fails with "Error constructing CesiumWidget ... reading 'addEventListener'". Leave it
+  `undefined` for the default globe.
+- **Qt Quick 6 + OpenGL libraries:** Qt Quick must be forced to its OpenGL backend
+  (`QQuickWindow::setGraphicsApi`), and it still creates a Core profile context. Anything that
+  needs the compatibility profile (a GL2-style OpenSceneGraph) cannot render into it.
+- **Seeing what the app draws:** from a container there is no screenshot tool, so the prototypes
+  accept `PROTO_SCREENSHOT=/path.png` and save the window with `grabToImage`. Do not open test
+  windows on the user's screen without telling them: a stock `osgearth_viewer` window left on
+  the screen looked like a bug to the user.
+- **Shared build folders:** CMake caches whether it found a library. Use separate build and
+  install folders per image (`scripts/dev` uses `build_osg`/`install_osg` for the osgEarth image).
+- **Background jobs:** a background command's exit code is the last command's (`tail` hides a
+  failed build). Check the log for the real result.
+- **Qt + CMake:** `qt_standard_project_setup(REQUIRES 6.5)` is needed, or the QML module is
+  registered under the old resource prefix and `loadFromModule` cannot find it. A QML module's
+  C++ headers must be on the target's include path.
+- **Floating point:** the heading of a drone facing North came out as 360° instead of 0°
+  (`-1e-16` plus `2pi`). Angle wrapping needs a test at the boundary.
+
 ### L11. Recording a PX4 SITL flight with GPS (works)
 1. `export PX4_HOME_LAT=48.2655 PX4_HOME_LON=11.6710 PX4_HOME_ALT=480` (TUM Garching), then
    `make px4_sitl gz_x500` in the Docker `base_image`.

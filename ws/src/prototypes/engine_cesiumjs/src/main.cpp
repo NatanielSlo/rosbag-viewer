@@ -8,12 +8,12 @@
 #include <QMimeDatabase>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickWebEngineProfile>
 #include <QTimer>
 #include <QWebEngineUrlRequestJob>
 #include <QWebEngineUrlScheme>
 #include <QWebEngineUrlSchemeHandler>
 #include <QtWebEngineQuick>
-#include <QQuickWebEngineProfile>
 
 class AppSchemeHandler : public QWebEngineUrlSchemeHandler {
 public:
@@ -29,8 +29,8 @@ public:
             job->fail(QWebEngineUrlRequestJob::RequestDenied);
             return;
         }
-        QString base = host == QStringLiteral("cesium") ? root_ + "/third_party/cesium"
-                                                        : root_ + "/web";
+        QString base =
+            host == QStringLiteral("cesium") ? root_ + "/third_party/cesium" : root_ + "/web";
         auto* file = new QFile(base + rel, job);
         if (!file->open(QIODevice::ReadOnly)) {
             job->fail(QWebEngineUrlRequestJob::UrlNotFound);
@@ -59,11 +59,11 @@ int main(int argc, char* argv[]) {
 
     QQmlApplicationEngine engine;
     // The token comes from the environment; it is never written to logs or files.
-    engine.rootContext()->setContextProperty("ionToken",
-                                             qEnvironmentVariable("CESIUM_ION_TOKEN"));
+    engine.rootContext()->setContextProperty("ionToken", qEnvironmentVariable("CESIUM_ION_TOKEN"));
     engine.rootContext()->setContextProperty("shotPath", qEnvironmentVariable("PROTO_SCREENSHOT"));
-    QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
-                     [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
+    QObject::connect(
+        &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
+        [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
     engine.loadFromModule("Proto", "Main");
     return app.exec();
 }

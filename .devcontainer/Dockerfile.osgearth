@@ -10,7 +10,7 @@ ARG CESIUM_NATIVE_TAG=v0.37.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      libopenscenegraph-dev libgdal-dev libgeos-dev libsqlite3-dev libcurl4-openssl-dev \
+      libgdal-dev libfreetype-dev libpng-dev libjpeg-dev libtiff-dev libxrandr-dev libxinerama-dev libgl-dev libgeos-dev libsqlite3-dev libcurl4-openssl-dev \
       libprotobuf-dev protobuf-compiler libzstd-dev libglew-dev libssl-dev nasm pkg-config \
  && rm -rf /var/lib/apt/lists/*
 
@@ -23,12 +23,28 @@ RUN git clone --depth 1 --branch ${CESIUM_NATIVE_TAG} --recurse-submodules --sha
  && cmake --install /tmp/cesium-native/build \
  && rm -rf /tmp/cesium-native
 
+# Ubuntu's OpenSceneGraph is a GL2 (fixed-function) build. Qt Quick 6 always creates a Core
+# profile context, where osgEarth's shaders do not compile, so OSG must be built with GL3.
+ARG OSG_TAG=OpenSceneGraph-3.6.5
+RUN git clone --depth 1 --branch ${OSG_TAG} https://github.com/openscenegraph/OpenSceneGraph.git /tmp/osg \
+ && cmake -S /tmp/osg -B /tmp/osg/build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/osg \
+      -DOPENGL_PROFILE=GL3 -DBUILD_OSG_APPLICATIONS=OFF -DBUILD_OSG_EXAMPLES=OFF \
+      -DCMAKE_CXX_FLAGS="-include cstdint" \
+ && cmake --build /tmp/osg/build \
+ && cmake --install /tmp/osg/build \
+ && rm -rf /tmp/osg
+ENV OSG_DIR=/opt/osg
+ENV OSG_LIBRARY_PATH=/opt/osg/lib64/osgPlugins-3.6.5:/opt/osg/lib/osgPlugins-3.6.5
+ENV CMAKE_PREFIX_PATH=/opt/osg:${CMAKE_PREFIX_PATH}
+ENV LD_LIBRARY_PATH=/opt/osg/lib:/opt/osg/lib64:${LD_LIBRARY_PATH}
+
 RUN git clone --depth 1 --branch ${OSGEARTH_TAG} https://github.com/gwaldron/osgearth.git /tmp/osgearth \
  && cmake -S /tmp/osgearth -B /tmp/osgearth/build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/osgearth \
       -DOSGEARTH_BUILD_CESIUM_NODEKIT=ON -DCESIUM_NATIVE_DIR=/opt/cesium-native \
       -DOSGEARTH_BUILD_PROCEDURAL_NODEKIT=OFF -DOSGEARTH_BUILD_LEGACY_SPLAT_NODEKIT=OFF \
-      -DOSGEARTH_BUILD_TESTS=OFF -DOSGEARTH_BUILD_EXAMPLES=ON \
+      -DOSG_DIR=/opt/osg -DOSGEARTH_BUILD_TESTS=OFF -DOSGEARTH_BUILD_EXAMPLES=ON -DOSGEARTH_BUILD_ZIP_PLUGIN=OFF \
  && cmake --build /tmp/osgearth/build \
  && cmake --install /tmp/osgearth/build \
  && rm -rf /tmp/osgearth

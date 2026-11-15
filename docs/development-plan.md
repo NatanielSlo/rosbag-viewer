@@ -21,10 +21,17 @@ Durations are rough estimates for one developer, for planning only. Re-estimate 
 - **Done when:** a fresh checkout builds and runs with one command, following the README.
 
 ### 1. 3D engine prototype, time-boxed (1–2 weeks)
+**Status (2026-11-15): in progress.** Prototype B is measured. Prototype A builds and is being
+debugged (findings in [decisions.md, ADR-002](decisions.md#adr-002-3d-engine) and
+[prototype-lessons.md](prototype-lessons.md)). Code: `ws/src/prototypes/`.
 - The same demo with osgEarth + Cesium Native and with CesiumJS in Qt WebEngine (ADR-002).
 - **Done when:** the engine is chosen and recorded in ADR-002.
 
 ### 2. Bag reading and flight model (2–3 weeks)
+**Status (2026-11-15): started.** Done and unit-tested (`ws/src/viewer/src/model/`): frame
+conversions and WGS84/ENU (`frames`), `ReplayClock`, `DroneTrack` with interpolation, dropout
+rule and flight-mode lookup. To do: `BagSource`, adapters and `topics.yaml`, drone detection by
+namespace, "Recording info", synthetic bag generator, performance measurements.
 - `BagSource` (sqlite3, mcap, compressed, split bags), summary index with an on-disk cache,
   progress on first open, clear errors for broken bags.
 - Adapters: PX4, MAVROS, team topics; `topics.yaml` with defaults. Unknown types are skipped.

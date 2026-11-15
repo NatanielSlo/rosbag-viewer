@@ -21,3 +21,5 @@ compile_commands.json
 *.mcap
 *.db3
 ws/shots/
+ws/build_osg/
+ws/install_osg/

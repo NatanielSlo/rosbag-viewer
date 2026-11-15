@@ -29,6 +29,27 @@ and its lessons are in [prototype-lessons.md](prototype-lessons.md).
 **Options.** (A) osgEarth + Cesium Native, (B) CesiumJS in Qt WebEngine, (C) Qt Quick 3D +
 Cesium Native (desk study only). Details and criteria: [architecture.md §4](architecture.md#4-3d-engine-options-decided-by-the-prototype-adr-002).
 
+**Prototype results so far (2026-11-15, Intel Iris Xe laptop, Google Photorealistic 3D Tiles via ion).**
+
+| | B: CesiumJS in Qt WebEngine | A: osgEarth + cesium-native |
+|---|---|---|
+| Build effort | About 150 lines plus the page; no extra build | cesium-native v0.37.0 (3.5 min) + osgEarth 3.8.1 from source; **OpenSceneGraph must also be built from source with GL3** |
+| Works in Qt Quick | Yes, with a native Qt overlay on top | Needs OpenGL; Qt Quick 6 always creates a Core context (see below) |
+| Frame rate | 48-56 fps with tiles, 60 bare | not measured yet |
+| Memory (all processes) | about 460 MB bare, 740-830 MB with tiles after 1 min | not measured yet |
+| No internet | Starts; tiles fail; shows a plain globe and a notice | not measured yet |
+| Attribution | Shown by Cesium (bottom-left) | Needs `CesiumCreditsNode`; the API takes ownership of a pointer osgEarth's own context still owns, so the node must be leaked on purpose to avoid a double free |
+
+Other findings:
+- Ubuntu's OpenSceneGraph (3.6.5) is a GL2 (fixed-function) build. Qt Quick 6 always creates a
+  Core-profile OpenGL context, whatever profile is requested, so osgEarth's shaders fail to
+  compile there (every shader fails, and Qt's own shaders then fail too). osgEarth's install
+  guide says it needs OpenGL 3. The fix is an OSG built with `OPENGL_PROFILE=GL3`.
+- cesium-native v0.37.0 (the release osgEarth's own CI uses) compiles with GCC 13 on Ubuntu 24.04.
+- osgEarth's `libzip` plugin does not configure on Ubuntu 24.04 (`zipcmp` missing); it is turned off.
+- osgEarth loads Google tiles from the example with a Google Maps key. Our rule (one Cesium
+  ion token per user) needs the ion asset route (`asset_id` 2275207) instead.
+
 **Known facts (2026-11).**
 - osgEarth 3.8 (March 2026) supports Cesium ion and Google 3D Tiles through its `osgEarthCesium` node kit.
 - It runs on OpenSceneGraph, which has been in maintenance mode since 2019.

@@ -13,7 +13,7 @@ qt_standard_project_setup(REQUIRES 6.5)
 
 # Everything that does not need a window lives in viewer_core (QtCore only),
 # so it can be unit-tested without UI or ROS.
-add_library(viewer_core STATIC src/appinfo.cpp)
+add_library(viewer_core STATIC src/appinfo.cpp src/model/frames.cpp src/model/flightmodel.cpp)
 target_include_directories(viewer_core PUBLIC src)
 target_link_libraries(viewer_core PUBLIC Qt6::Core)
 
@@ -28,8 +28,10 @@ install(TARGETS viewer RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
-  ament_add_gtest(test_appinfo test/test_appinfo.cpp)
-  target_link_libraries(test_appinfo viewer_core)
+  foreach(t appinfo frames replayclock flightmodel)
+    ament_add_gtest(test_${t} test/test_${t}.cpp)
+    target_link_libraries(test_${t} viewer_core)
+  endforeach()
 endif()
 
 ament_package()

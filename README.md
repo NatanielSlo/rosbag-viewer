@@ -9,7 +9,10 @@ replays the mission. It works with any bag, and with one or more drones per bag.
 **Scope:** only post-mission 3D visualization from rosbags. Mission planning and live
 telemetry are separate parts of the team's ground control station, built by other team members.
 
-**Status:** planning. No code yet.
+**Status:** early development (see [docs/development-plan.md](docs/development-plan.md)).
+Step 0 (dev container, app skeleton, tests) is done. Step 1 (3D engine prototypes) is in
+progress. In Step 2, the engine-independent core is in place and tested: frame conversions
+(NED/FRD to ENU/FLU, WGS84), `ReplayClock` and the per-drone flight model. Bag reading is next.
 
 | Document | Contents |
 |---|---|

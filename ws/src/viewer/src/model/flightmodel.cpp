@@ -1,0 +1,46 @@
+#include "model/flightmodel.h"
+
+#include <algorithm>
+#include <cmath>
+
+namespace viewer {
+
+void DroneTrack::addSample(const PoseSample& s) { samples_.push_back(s); }
+
+void DroneTrack::addModeChange(double t, std::string mode) {
+    modes_.push_back({t, std::move(mode)});
+}
+
+std::optional<Pose> DroneTrack::poseAt(double t, double maxGap) const {
+    if (samples_.empty()) return std::nullopt;
+    // first sample with time > t
+    const auto next = std::upper_bound(samples_.begin(), samples_.end(), t,
+                                       [](double v, const PoseSample& s) { return v < s.t; });
+    if (next == samples_.begin()) {  // before the first sample
+        if (samples_.front().t - t > maxGap) return std::nullopt;
+        return Pose{samples_.front().position, samples_.front().attitude};
+    }
+    const PoseSample& a = *(next - 1);
+    if (next == samples_.end()) {  // after the last sample
+        if (t - a.t > maxGap) return std::nullopt;
+        return Pose{a.position, a.attitude};
+    }
+    const PoseSample& b = *next;
+    if (b.t - a.t <= maxGap) {
+        const double u = (b.t > a.t) ? (t - a.t) / (b.t - a.t) : 0.0;
+        return Pose{lerp(a.position, b.position, u), slerp(a.attitude, b.attitude, u)};
+    }
+    // Dropout between a and b: hold the nearer sample if it is close enough, else no data.
+    const PoseSample& nearest = (t - a.t <= b.t - t) ? a : b;
+    if (std::abs(t - nearest.t) > maxGap) return std::nullopt;
+    return Pose{nearest.position, nearest.attitude};
+}
+
+std::optional<std::string> DroneTrack::modeAt(double t) const {
+    const auto next = std::upper_bound(modes_.begin(), modes_.end(), t,
+                                       [](double v, const ModeChange& m) { return v < m.t; });
+    if (next == modes_.begin()) return std::nullopt;
+    return (next - 1)->mode;
+}
+
+}  // namespace viewer
