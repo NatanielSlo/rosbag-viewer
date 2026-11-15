@@ -30,8 +30,11 @@ debugged (findings in [decisions.md, ADR-002](decisions.md#adr-002-3d-engine) an
 ### 2. Bag reading and flight model (2–3 weeks)
 **Status (2026-11-15): started.** Done and unit-tested (`ws/src/viewer/src/model/`): frame
 conversions and WGS84/ENU (`frames`), `ReplayClock`, `DroneTrack` with interpolation, dropout
-rule and flight-mode lookup. To do: `BagSource`, adapters and `topics.yaml`, drone detection by
-namespace, "Recording info", synthetic bag generator, performance measurements.
+rule and flight-mode lookup, and the synthetic bag generator `make_test_bag` (PX4 topics, circle /
+ellipse / figure-eight from the onboarding, sqlite3 or mcap, optional GPS and namespace), with a
+test that reads its bags back with `rosbag2_cpp`. To do: `BagSource`, adapters and `topics.yaml`,
+drone detection by namespace, "Recording info", compressed and split test bags, performance
+measurements.
 - `BagSource` (sqlite3, mcap, compressed, split bags), summary index with an on-disk cache,
   progress on first open, clear errors for broken bags.
 - Adapters: PX4, MAVROS, team topics; `topics.yaml` with defaults. Unknown types are skipped.
