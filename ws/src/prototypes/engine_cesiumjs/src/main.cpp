@@ -61,6 +61,7 @@ int main(int argc, char* argv[]) {
     // The token comes from the environment; it is never written to logs or files.
     engine.rootContext()->setContextProperty("ionToken",
                                              qEnvironmentVariable("CESIUM_ION_TOKEN"));
+    engine.rootContext()->setContextProperty("shotPath", qEnvironmentVariable("PROTO_SCREENSHOT"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
                      [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
     engine.loadFromModule("Proto", "Main");

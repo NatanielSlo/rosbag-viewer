@@ -1,0 +1,37 @@
+# Step 1, prototype A only: osgEarth 3.8.1 + cesium-native, built from source (ADR-002).
+# Slow (an hour or more), so it is a separate image on top of the normal dev image.
+#   docker build -t rosbag-viewer-dev-osgearth -f .devcontainer/Dockerfile.osgearth .devcontainer
+ARG BASE=rosbag-viewer-dev
+FROM ${BASE}
+USER root
+ARG OSGEARTH_TAG=osgearth-3.8.1
+# osgEarth's own CI builds against this cesium-native release.
+ARG CESIUM_NATIVE_TAG=v0.37.0
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libopenscenegraph-dev libgdal-dev libgeos-dev libsqlite3-dev libcurl4-openssl-dev \
+      libprotobuf-dev protobuf-compiler libzstd-dev libglew-dev libssl-dev nasm pkg-config \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 --branch ${CESIUM_NATIVE_TAG} --recurse-submodules --shallow-submodules \
+      https://github.com/CesiumGS/cesium-native.git /tmp/cesium-native \
+ && cmake -S /tmp/cesium-native -B /tmp/cesium-native/build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/cesium-native \
+      -DCESIUM_TESTS_ENABLED=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+ && cmake --build /tmp/cesium-native/build \
+ && cmake --install /tmp/cesium-native/build \
+ && rm -rf /tmp/cesium-native
+
+RUN git clone --depth 1 --branch ${OSGEARTH_TAG} https://github.com/gwaldron/osgearth.git /tmp/osgearth \
+ && cmake -S /tmp/osgearth -B /tmp/osgearth/build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/osgearth \
+      -DOSGEARTH_BUILD_CESIUM_NODEKIT=ON -DCESIUM_NATIVE_DIR=/opt/cesium-native \
+      -DOSGEARTH_BUILD_PROCEDURAL_NODEKIT=OFF -DOSGEARTH_BUILD_LEGACY_SPLAT_NODEKIT=OFF \
+      -DOSGEARTH_BUILD_TESTS=OFF -DOSGEARTH_BUILD_EXAMPLES=ON \
+ && cmake --build /tmp/osgearth/build \
+ && cmake --install /tmp/osgearth/build \
+ && rm -rf /tmp/osgearth
+ENV CMAKE_PREFIX_PATH=/opt/osgearth:${CMAKE_PREFIX_PATH}
+ENV LD_LIBRARY_PATH=/opt/osgearth/lib:/opt/osgearth/lib64:/opt/cesium-native/lib:${LD_LIBRARY_PATH}
+ENV PATH=/opt/osgearth/bin:${PATH}

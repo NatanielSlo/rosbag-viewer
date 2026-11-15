@@ -59,6 +59,13 @@ Window {
         }
     }
 
+    // Debug aid: PROTO_SCREENSHOT=/path/file.png saves the window after 25 s.
+    Timer {
+        interval: 25000; running: win.ready && shotPath !== ""
+        onTriggered: win.contentItem.grabToImage(function(r) {
+            console.log("SCREENSHOT", r.saveToFile(shotPath) ? "saved" : "failed") })
+    }
+
     // Native overlay on top of the web view (checks that Qt Quick items can float over it).
     Rectangle {
         x: 16; y: 16; width: hud.width + 24; height: hud.height + 16

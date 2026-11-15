@@ -31,6 +31,7 @@ async function init(token) {
       tileset.allTilesLoaded.addEventListener(() => console.log("STATUS Google 3D Tiles: loaded"));
     } catch (e) {
       notice("3D Tiles failed: " + e.message + " (token wrong or no internet)");
+      viewer.scene.globe = new Cesium.Globe(viewer.scene.ellipsoid);   // plain globe instead of black
       console.log("STATUS tiles failed");
     }
   } else {

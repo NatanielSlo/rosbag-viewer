@@ -29,7 +29,7 @@ image() {
 in_container() {
   local args=(--rm -v "$PWD":/workspace -w /workspace --device /dev/dri
               --user "$(id -u):$(id -g)" -e HOME=/tmp/home --group-add video
-              -e CESIUM_ION_TOKEN
+              -e CESIUM_ION_TOKEN -e PROTO_SCREENSHOT
               # Chromium's sandbox needs privileges a container does not have (dev only)
               -e QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox)
   [[ -e /dev/dri/renderD128 ]] && args+=(--group-add "$(stat -c %g /dev/dri/renderD128)")
@@ -39,6 +39,8 @@ in_container() {
     args+=(-e DISPLAY -e QT_QPA_PLATFORM=xcb -v /tmp/.X11-unix:/tmp/.X11-unix)
   fi
   docker image inspect "$IMAGE" >/dev/null 2>&1 || image
+  # shellcheck disable=SC2206
+  args+=(${VIEWER_DOCKER_ARGS:-})   # e.g. VIEWER_DOCKER_ARGS="--network none" to test offline
   docker run "${args[@]}" "$IMAGE" bash -c \
     "mkdir -p /tmp/home && source /opt/ros/jazzy/setup.bash && source /opt/px4_ws/install/setup.bash && $*"
 }
