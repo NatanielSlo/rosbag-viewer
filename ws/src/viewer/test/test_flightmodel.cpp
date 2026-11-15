@@ -91,3 +91,19 @@ TEST(DroneTrack, NoModeBeforeTheFirstChange) {
     t.addModeChange(5.0, "MANUAL");
     EXPECT_FALSE(t.modeAt(1.0));
 }
+
+TEST(GeoPoint, InterpolatesAndHonoursDropouts) {
+    DroneTrack d;
+    EXPECT_FALSE(d.geoPointAt(0));
+    d.addGps({0, {48.0, 11.0, 500}});
+    d.addGps({1, {48.2, 11.2, 510}});
+    d.addGps({10, {48.4, 11.4, 520}});
+    const auto mid = d.geoPointAt(0.5);
+    ASSERT_TRUE(mid);
+    EXPECT_NEAR(mid->latDeg, 48.1, 1e-9);
+    EXPECT_NEAR(mid->heightM, 505, 1e-9);
+    ASSERT_TRUE(d.geoPointAt(2.0));        // held from the sample at t=1
+    EXPECT_NEAR(d.geoPointAt(2.0)->latDeg, 48.2, 1e-9);
+    EXPECT_FALSE(d.geoPointAt(5.0));       // inside the 9 s dropout, too far from both
+    EXPECT_FALSE(d.geoPointAt(20.0));      // after the end
+}

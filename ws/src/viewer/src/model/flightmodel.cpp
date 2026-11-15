@@ -36,6 +36,25 @@ std::optional<Pose> DroneTrack::poseAt(double t, double maxGap) const {
     return Pose{nearest.position, nearest.attitude};
 }
 
+std::optional<Geodetic> DroneTrack::geoPointAt(double t, double maxGap) const {
+    if (gps_.empty()) return std::nullopt;
+    const auto next = std::upper_bound(gps_.begin(), gps_.end(), t,
+                                       [](double v, const GpsSample& s) { return v < s.t; });
+    auto held = [&](const GpsSample& g) -> std::optional<Geodetic> {
+        if (std::abs(t - g.t) > maxGap) return std::nullopt;
+        return g.position;
+    };
+    if (next == gps_.begin()) return held(gps_.front());
+    const GpsSample& a = *(next - 1);
+    if (next == gps_.end()) return held(a);
+    const GpsSample& b = *next;
+    if (b.t - a.t > maxGap) return held(t - a.t <= b.t - t ? a : b);
+    const double u = b.t > a.t ? (t - a.t) / (b.t - a.t) : 0.0;
+    return Geodetic{a.position.latDeg + u * (b.position.latDeg - a.position.latDeg),
+                    a.position.lonDeg + u * (b.position.lonDeg - a.position.lonDeg),
+                    a.position.heightM + u * (b.position.heightM - a.position.heightM)};
+}
+
 std::optional<double> ScalarSeries::valueAt(double t, double maxGap, bool step) const {
     if (samples_.empty()) return std::nullopt;
     const auto next = std::upper_bound(samples_.begin(), samples_.end(), t,

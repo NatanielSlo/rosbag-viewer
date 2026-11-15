@@ -85,6 +85,9 @@ public:
 
     void addGps(const GpsSample& g) { gps_.push_back(g); }
     const std::vector<GpsSample>& gps() const { return gps_; }
+    // Interpolated GPS position at time t (ellipsoid height), with the same dropout rule as
+    // poseAt: nothing when no GPS sample is within `maxGap` seconds.
+    std::optional<Geodetic> geoPointAt(double t, double maxGap = 2.0) const;
     // Reference point of the local frame, when the autopilot reports one. Height is AMSL
     // (PX4 `ref_alt`), unlike the GPS samples, which carry ellipsoid heights.
     void setOrigin(Geodetic g) { origin_ = g; }
