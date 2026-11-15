@@ -1,0 +1,5 @@
+drone.glb: "CesiumDrone"
+Mesh and textures by Ed Mackey, Copyright 2017, 2018 Analytical Graphics, Inc.
+Licensed under CC-BY 4.0: https://creativecommons.org/licenses/by/4.0/
+Source: https://github.com/CesiumGS/cesium (Apps/SampleData/models/CesiumDrone/CesiumDrone.glb, tag 1.147)
+No changes were made to the model.

@@ -30,3 +30,7 @@ container built on the team's onboarding image `base-image:jazzy` (ADR-010).
 then `scripts/dev run [bag]` (a rosbag2 folder; or Ctrl+O in the app). Other commands: `build`, `test`, `smoke`, `format`, `shell`.
 
 The earlier Electron/Python prototype is kept at the git tag `prototype-electron`.
+
+**Credits:** the drone model in the 3D view is "CesiumDrone" by Ed Mackey (Analytical Graphics /
+Cesium), CC-BY 4.0 (`ws/src/viewer/web/models/CREDITS.txt`). It is a placeholder until the team has
+its own model.

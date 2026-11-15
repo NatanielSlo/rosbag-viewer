@@ -47,7 +47,11 @@ async function init(token) {
     position: new Cesium.CallbackProperty(() => cart(current), false),
     orientation: new Cesium.CallbackProperty(() => Cesium.Transforms.headingPitchRollQuaternion(
       cart(current), new Cesium.HeadingPitchRoll(current ? current[3] - Math.PI / 2 : 0, 0, 0)), false),
-    box: { dimensions: new Cesium.Cartesian3(3, 1, 0.6), material: Cesium.Color.ORANGE },
+    // CesiumDrone (CC-BY 4.0, see models/CREDITS.txt). Its front is glTF +Z, which Cesium maps to
+    // the entity's heading direction, so no extra rotation is needed. Scaled down to a small
+    // quadcopter, but never drawn smaller than 48 px so it stays visible from far away.
+    model: { uri: "app://demo/models/drone.glb", scale: 0.25, minimumPixelSize: 48,
+             maximumScale: 20, runAnimations: true },
   });
 
   // Right button rotates like the left one (Cesium's default makes it zoom); the wheel zooms.

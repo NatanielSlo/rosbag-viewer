@@ -74,6 +74,7 @@ F/T/R/Z with animated flights). Free camera: left or right drag rotates, middle 
 chase angle, wheel/pinch/PgUp/PgDn/+/- zoom and Q/E rotate, all without leaving follow; panning (arrows/WASD),
 middle drag, Top, Reset, Whole flight or pressing Follow again stop following (the Follow button shows the state), click the path to seek, path tooltip, the `?`
 overlay, Tab for drones. Code: `src/app/replaycontroller.*`, `web/scene.js`, `qml/Main.qml`.
+The drone is the CC-BY CesiumDrone glTF model (placeholder, credits in the README).
 Not done: the local 3D scene for bags without GPS (the window says so), `,`/`.` camera frames
 and C (no camera yet), M (needs the local scene), the Analysis panel (Ctrl+J), event markers
 and timeline zoom, attitude in the drone model, setpoint/LIO path, speed in the path tooltip.
