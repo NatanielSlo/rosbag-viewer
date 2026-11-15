@@ -1,13 +1,22 @@
+# secrets
 .env
 .env.*
 !.env.example
-node_modules/
-dist/
-__pycache__/
-*.pyc
-.venv/
-*.AppImage
-tests/data/*.mcap
-tests/data/*.db3
-.pytest_cache/
-screenshots/
+
+# colcon / CMake
+build/
+install/
+log/
+CMakeUserPresets.json
+compile_commands.json
+
+# Qt Creator / IDEs
+*.user
+*.user.*
+.qtcreator/
+.vscode/
+.idea/
+
+# bag files and test data (kept outside git)
+*.mcap
+*.db3
