@@ -191,6 +191,12 @@ Useful when writing the adapters and `topics.yaml`.
 | 2 | `/parameter_events` | rcl_interfaces/msg/ParameterEvent |
 | 1 | `/mavros/param/event` | mavros_msgs/msg/ParamEvent |
 
+**Consequence for the viewer:** MAVROS is the main source (the 17 flight bags), PX4 `/fmu/out` is
+the exception (2 bags, both SITL or test flights). Adapters were first written for PX4 only and
+would have shown nothing for most real bags; always check this table before choosing what to build.
+The two GPS-capable bags are PX4; the MAVROS bags have no `/mavros/global_position/global`, so real
+outdoor MAVROS flights still need a test bag (open question 2 in the plan).
+
 Notes: the prototype read only standard types, because sqlite3 bags do not embed `mavros_msgs` /
 `livox_ros_driver2` definitions. The new viewer reads bags with `rosbag2_cpp` and ROS installed
 (ADR-003), so it can decode them, which gives it much richer data than the prototype had (`/mavros/state` for armed/mode,

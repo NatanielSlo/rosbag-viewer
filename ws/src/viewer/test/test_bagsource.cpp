@@ -7,6 +7,7 @@
 #include <string>
 
 #include "bag/bagsource.h"
+#include "bag/recordinginfo.h"
 #include "model/frames.h"
 #include "model/telemetry.h"
 #include "testing/shapes.h"
@@ -124,6 +125,76 @@ TEST_P(BagSourceTest, SplitBagIsReadAcrossAllFiles) {
 }
 
 INSTANTIATE_TEST_SUITE_P(Storage, BagSourceTest, ::testing::Values("sqlite3", "mcap"));
+
+// The same flight recorded the MAVROS way (ENU, standard ROS messages) must give the same result.
+class MavrosBagTest : public ::testing::TestWithParam<std::string> {};
+
+TEST_P(MavrosBagTest, CircleFlightMatchesGroundTruth) {
+    const auto dir =
+        makeBag("mav_circle", GetParam(), "--flavor mavros --shape circle --duration 40");
+    const FlightData f = loadFlight(dir.string());
+    ASSERT_EQ(f.drones.size(), 1u);
+    const DroneTrack& d = f.drones.at("");
+    const fixtures::FlightPlan plan;
+    for (double tt : {8.0, 12.5, 20.0, 30.0}) {
+        const auto p = d.poseAt(tt);
+        ASSERT_TRUE(p) << "t=" << tt;
+        const auto truth = fixtures::shapeAt(fixtures::Shape::Circle, tt - plan.shapeAt);
+        EXPECT_NEAR(p->position.x, truth.east, 0.05) << "t=" << tt;
+        EXPECT_NEAR(p->position.y, truth.north, 0.05) << "t=" << tt;
+        EXPECT_NEAR(p->position.z, plan.altitude, 0.05) << "t=" << tt;
+        EXPECT_NEAR(wrapAngle(headingFromAttitude(p->attitude) - truth.yaw), 0.0, 0.02)
+            << "t=" << tt;
+    }
+}
+
+TEST_P(MavrosBagTest, ModesTelemetryGpsAndInfo) {
+    const auto dir =
+        makeBag("mav_all", GetParam(),
+                "--flavor mavros --shape circle --duration 40 --gps 48.2655 11.6710 480 "
+                "--namespace /drone2");
+    const FlightData f = loadFlight(dir.string());
+    ASSERT_EQ(f.drones.count("/drone2"), 1u);  // namespace in front of /mavros
+    const DroneTrack& d = f.drones.at("/drone2");
+    // MAVROS strings are shown with the same names as PX4 modes
+    EXPECT_EQ(d.modeAt(0.2), "MANUAL");
+    EXPECT_EQ(d.modeAt(10.0), "OFFBOARD");
+    EXPECT_EQ(d.modeAt(39.0), "LAND");
+
+    const Telemetry v = telemetryAt(d, 20.0);
+    EXPECT_NEAR(*v.groundSpeed, 1.2, 0.01);
+    EXPECT_NEAR(*v.batteryFraction, 0.9, 0.01);
+    EXPECT_NEAR(*v.batteryVoltage, 16.2, 0.05);
+    EXPECT_TRUE(*v.armed);
+    EXPECT_NEAR(double(d.gps().size()), 401.0, 2.0);
+    EXPECT_NEAR(d.gps().back().position.heightM, 480.0 + 47.0, 1.0);
+
+    // and the Recording info names the MAVROS topics
+    const auto info = describeRecording(f);
+    EXPECT_NE(info.drones[0].lines[0].detail.find("/drone2/mavros/local_position/pose"),
+              std::string::npos);
+}
+
+TEST_P(MavrosBagTest, MavrosIsPreferredWhenBothFlavorsAreInOneBag) {
+    const auto dir =
+        makeBag("both", GetParam(), "--flavor both --duration 20 --gps 48.2655 11.6710 480");
+    const FlightData f = loadFlight(dir.string());
+    ASSERT_EQ(f.drones.size(), 1u);  // one drone, not two
+    const DroneSources& src = f.sources.at("");
+    EXPECT_EQ(src.position, "/mavros/local_position/pose");
+    EXPECT_EQ(src.status, "/mavros/state");
+    EXPECT_EQ(src.gps, "/mavros/global_position/global");
+    // the PX4 topics are in the bag but not used for what MAVROS already provides
+    const auto info = describeRecording(f);
+    bool px4Unused = false;
+    for (const auto& u : info.unusedTopics)
+        px4Unused |= u.name == "/fmu/out/vehicle_local_position_v1";
+    EXPECT_TRUE(px4Unused);
+    // 20 s at 50 Hz: both flavors have 1001 position samples, the result must not be doubled
+    EXPECT_EQ(f.drones.at("").samples().size(), 1001u);
+}
+
+INSTANTIATE_TEST_SUITE_P(Storage, MavrosBagTest, ::testing::Values("sqlite3", "mcap"));
 
 TEST(BagSource, MissingBagGivesAClearError) {
     try {

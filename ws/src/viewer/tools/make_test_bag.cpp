@@ -1,7 +1,7 @@
 // Writes a synthetic PX4-style flight as a rosbag2 (sqlite3 or mcap), for tests and demos.
 //   make_test_bag --out DIR [--storage sqlite3|mcap] [--shape circle|ellipse|eight]
 //                 [--duration 60] [--gps LAT LON ALT_AMSL] [--namespace /drone1]
-//                 [--compress] [--split-bytes N]
+//                 [--compress] [--split-bytes N] [--flavor px4|mavros|both]
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -9,6 +9,9 @@
 #include <memory>
 #include <string>
 
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
+#include <mavros_msgs/msg/state.hpp>
 #include <px4_msgs/msg/battery_status.hpp>
 #include <px4_msgs/msg/vehicle_attitude.hpp>
 #include <px4_msgs/msg/vehicle_global_position.hpp>
@@ -19,6 +22,8 @@
 #include <rosbag2_compression/sequential_compression_writer.hpp>
 #include <rosbag2_cpp/writer.hpp>
 #include <rosbag2_storage/storage_options.hpp>
+#include <sensor_msgs/msg/battery_state.hpp>
+#include <sensor_msgs/msg/nav_sat_fix.hpp>
 
 #include "testing/shapes.h"
 
@@ -34,6 +39,7 @@ struct Options {
     bool gps = false;
     double lat = 48.2655, lon = 11.6710, alt = 480.0;
     bool compress = false;
+    bool mavros = false, both = false;
     uint64_t splitBytes = 0;
 };
 
@@ -59,7 +65,11 @@ int main(int argc, char** argv) {
             o.storage = next();
         else if (a == "--namespace")
             o.ns = next();
-        else if (a == "--compress")
+        else if (a == "--flavor") {
+            const std::string f = next();
+            o.mavros = f == "mavros" || f == "both";
+            o.both = f == "both";
+        } else if (a == "--compress")
             o.compress = true;
         else if (a == "--split-bytes")
             o.splitBytes = std::strtoull(next(), nullptr, 10);
@@ -133,6 +143,53 @@ int main(int argc, char** argv) {
             yaw = s.yaw;
             alt = std::max(0.0, plan.altitude - (t - plan.landAt) * 0.5);
             vD = alt > 0 ? 0.5 : 0;
+        }
+
+        if (o.mavros) {  // MAVROS flavor: ENU / FLU, standard ROS message types
+            const rclcpp::Time stamp(ns, RCL_SYSTEM_TIME);
+            const double yawEnu = M_PI / 2 - yaw;  // PX4 yaw is clockwise from North
+            geometry_msgs::msg::PoseStamped ps;
+            ps.header.stamp = stamp;
+            ps.header.frame_id = "map";
+            ps.pose.position.x = east;
+            ps.pose.position.y = north;
+            ps.pose.position.z = alt;
+            ps.pose.orientation.w = std::cos(yawEnu / 2);
+            ps.pose.orientation.z = std::sin(yawEnu / 2);
+            put(writer, ps, o.ns + "/mavros/local_position/pose", ns);
+
+            geometry_msgs::msg::TwistStamped ts;
+            ts.header.stamp = stamp;
+            ts.twist.linear.x = vE;
+            ts.twist.linear.y = vN;
+            ts.twist.linear.z = -vD;
+            put(writer, ts, o.ns + "/mavros/local_position/velocity_local", ns);
+
+            if (o.gps && step % 5 == 0) {  // 10 Hz
+                sensor_msgs::msg::NavSatFix fix;
+                fix.header.stamp = stamp;
+                fix.status.status = sensor_msgs::msg::NavSatStatus::STATUS_FIX;
+                fix.latitude = o.lat + north / 111'320.0;
+                fix.longitude = o.lon + east / (111'320.0 * std::cos(o.lat / deg));
+                fix.altitude = o.alt + 47.0 + alt;  // MAVROS reports ellipsoid height (L8)
+                put(writer, fix, o.ns + "/mavros/global_position/global", ns);
+            }
+            if (step % 50 == 0) {
+                sensor_msgs::msg::BatteryState bs;
+                bs.header.stamp = stamp;
+                bs.percentage = float(1.0 - 0.2 * t / o.duration);
+                bs.voltage = float(16.8 - 1.2 * t / o.duration);
+                put(writer, bs, o.ns + "/mavros/battery", ns);
+            }
+            if (step % 25 == 0) {
+                mavros_msgs::msg::State st;
+                st.header.stamp = stamp;
+                st.connected = true;
+                st.armed = t >= plan.armAt && !(t > o.duration - 0.1);
+                st.mode = t < plan.armAt ? "MANUAL" : t < plan.landAt ? "OFFBOARD" : "AUTO.LAND";
+                put(writer, st, o.ns + "/mavros/state", ns);
+            }
+            if (!o.both) continue;  // "both": also write the PX4 topics below
         }
 
         msg::VehicleLocalPosition lp;

@@ -118,6 +118,13 @@ a preference list per signal, because names differ between bags (L4).
 - **MAVROS**: already ENU. Also `mavros_msgs` (`/mavros/state`, `/mavros/statustext/recv`, waypoints).
 - **Team topics**: flight mode strings, course state, setpoints, LIO, YOLO detections (L7).
 
+**Implemented so far (adapters):** two flavors, detected from the topic (`/mavros/...` or `/fmu/out/...`,
+with the drone namespace in front). For every kind of data (path, modes, battery, GPS, ...) the first
+flavor that has it wins, MAVROS before PX4, so a bag recording both still gives one drone. MAVROS
+mode strings (`AUTO.MISSION`) are shown with the PX4 names (`MISSION`). PX4's invalid markers are
+skipped (`remaining = -1`, `voltage = 0`, `xy_valid = false`), and so are NaN values and "no fix"
+from MAVROS. The preference order is fixed in code for now and moves to `topics.yaml` later.
+
 ### 3.3 Flight model
 - **Several drones per bag:** drones are detected by topic namespace (e.g. `/drone1/mavros/…`,
   `/drone2/fmu/…`; topics without a namespace form one drone). Each drone has its own series,

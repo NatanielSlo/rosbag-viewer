@@ -46,9 +46,13 @@ speeds, skipping PX4's "invalid" markers (`remaining = -1`, `voltage = 0`).
 is Found, NoSamples (topic present but nothing usable, e.g. estimator never valid) or NotInBag, with
 the topic and sample count or what the missing data disables; plus topics the viewer does not use
 and whole-recording warnings.
-To do: summary index with on-disk cache and progress, `topics.yaml` and the MAVROS/team adapters,
-rates (`VehicleAngularVelocity`), damaged bags (partial read is in, but untested), performance
-measurements.
+**MAVROS adapter is in** (17 of the 19 real bags are MAVROS bags, only 2 are PX4): pose, velocity,
+battery, `/mavros/state` (armed + mode, shown with the same names as PX4 modes) and GPS
+(`NavSatFix`). Per drone, each kind of data comes from the first flavor that has any, MAVROS first
+(already ENU, and what the team records); a bag with both gives one drone, not two.
+To do: summary index with on-disk cache and progress, `topics.yaml` (preference lists; today the
+order is fixed in code) and the team topics (`/flight_mode` strings, setpoints, LIO odometry, course
+state), rates, damaged bags (partial read is in, but untested), performance measurements.
 - `BagSource` (sqlite3, mcap, compressed, split bags), summary index with an on-disk cache,
   progress on first open, clear errors for broken bags.
 - Adapters: PX4, MAVROS, team topics; `topics.yaml` with defaults. Unknown types are skipped.
