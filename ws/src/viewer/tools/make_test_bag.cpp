@@ -1,7 +1,7 @@
 // Writes a synthetic PX4-style flight as a rosbag2 (sqlite3 or mcap), for tests and demos.
 //   make_test_bag --out DIR [--storage sqlite3|mcap] [--shape circle|ellipse|eight]
 //                 [--duration 60] [--gps LAT LON ALT_AMSL] [--namespace /drone1]
-//                 [--compress] [--split-bytes N] [--flavor px4|mavros|both]
+//                 [--radius M] [--speed M_PER_S] [--altitude M] [--compress] [--split-bytes N] [--flavor px4|mavros|both]
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -36,6 +36,7 @@ struct Options {
     std::string out, storage = "sqlite3", ns;
     Shape shape = Shape::Circle;
     double duration = 60;
+    double radius = 3.0, speed = 1.2, altitude = 2.0;  // defaults: a small indoor flight
     bool gps = false;
     double lat = 48.2655, lon = 11.6710, alt = 480.0;
     bool compress = false;
@@ -73,6 +74,12 @@ int main(int argc, char** argv) {
             o.compress = true;
         else if (a == "--split-bytes")
             o.splitBytes = std::strtoull(next(), nullptr, 10);
+        else if (a == "--radius")
+            o.radius = std::atof(next());
+        else if (a == "--speed")
+            o.speed = std::atof(next());
+        else if (a == "--altitude")
+            o.altitude = std::atof(next());
         else if (a == "--duration")
             o.duration = std::atof(next());
         else if (a == "--shape") {
@@ -95,6 +102,9 @@ int main(int argc, char** argv) {
 
     FlightPlan plan;
     plan.landAt = o.duration - 5.0;
+    plan.altitude = o.altitude;
+    plan.climbRate = std::max(1.0, o.altitude / 10.0);
+    const double omega = o.speed / o.radius;
 
     rosbag2_storage::StorageOptions so;
     so.uri = o.out;
@@ -113,7 +123,7 @@ int main(int argc, char** argv) {
     writer.open(so);
 
     const int64_t t0 = 1'780'000'000LL * 1'000'000'000LL;  // arbitrary fixed start (2026)
-    const ShapeState start = shapeAt(o.shape, 0);
+    const ShapeState start = shapeAt(o.shape, 0, o.radius, omega);
     const double deg = 180.0 / M_PI;
 
     for (int step = 0; step * 0.02 <= o.duration; ++step) {  // 50 Hz
@@ -123,21 +133,21 @@ int main(int argc, char** argv) {
 
         // position and attitude truth
         double alt = 0, north = start.north, east = start.east, vN = 0, vE = 0, vD = 0,
-               yaw = shapeAt(o.shape, 0).yaw;
+               yaw = shapeAt(o.shape, 0, o.radius, omega).yaw;
         if (t >= plan.climbAt) {
             const double up = std::min(plan.altitude, (t - plan.climbAt) * plan.climbRate);
             alt = up;
             vD = (up < plan.altitude && t < plan.landAt) ? -plan.climbRate : 0;
         }
         if (t >= plan.shapeAt && t < plan.landAt) {
-            const ShapeState s = shapeAt(o.shape, t - plan.shapeAt);
+            const ShapeState s = shapeAt(o.shape, t - plan.shapeAt, o.radius, omega);
             north = s.north;
             east = s.east;
             vN = s.vNorth;
             vE = s.vEast;
             yaw = s.yaw;
         } else if (t >= plan.landAt) {  // hold position and descend
-            const ShapeState s = shapeAt(o.shape, plan.landAt - plan.shapeAt);
+            const ShapeState s = shapeAt(o.shape, plan.landAt - plan.shapeAt, o.radius, omega);
             north = s.north;
             east = s.east;
             yaw = s.yaw;

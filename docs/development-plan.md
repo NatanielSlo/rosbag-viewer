@@ -66,7 +66,7 @@ state), rates, damaged bags (partial read is in, but untested), performance meas
 
 ### 3. Indoor 3D scene, playback and controls (3–4 weeks)
 **Status (2026-11-15): first slice running on the map engine (B), GPS bags only.** The `viewer`
-app opens a bag (`scripts/dev run demo/gps_circle`, or Ctrl+O), shows the toolbar with status
+app opens a bag (`scripts/dev run demo/gps_circle`, or Ctrl+O; make an outdoor-sized demo with `make_test_bag --gps LAT LON ALT --radius 150 --speed 8 --altitude 40`), shows the toolbar with status
 chips and drone selector, the CesiumJS map filling the window, a floating telemetry panel,
 view controls and a docked timeline with flight-mode bands, click/drag seek and hover time.
 Done: transport (Space, J/K/L, Shift+,/., Home/End, +/-), view keys (arrows/WASD, Q/E, PgUp/PgDn,
