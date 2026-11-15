@@ -96,6 +96,30 @@ checking for production use.
 
 ---
 
+## What the team onboarding adds (onboarding_tutorial.pdf)
+
+Facts from the team's "Software and Autonomy Onboarding Exercises" that matter to the viewer:
+
+- **One environment for everyone:** the Docker image `base-image:jazzy` (from
+  `OpenHORYZN/base_image`, `./build_container.sh`, 30-60 min). Containers run as `root`;
+  `~/Repos` on the laptop is `/ros2_ws` in the container; QGroundControl runs on the laptop.
+  Supported hosts: Ubuntu 22.04 and 24.04.
+- **PX4 v1.17** with the uXRCE-DDS agent (`MicroXRCEAgent udp4 -p 8888`). Topics from the drone
+  are `/fmu/out/*`; commands go to `/fmu/in/*`.
+- **Versioned topic names**, e.g. `/fmu/out/vehicle_local_position_v1`, `/fmu/out/vehicle_status_v1`.
+  The adapters must accept the suffix and check the exact name (confirms L4/L5).
+- **QoS:** PX4 publishes best-effort. This matters for recording and for any bag-replay test.
+- **Frames:** PX4 uses NED (world) and FRD (body). ROS uses ENU/FLU. NED to ENU is
+  `(x, y, z) = (y, x, -z)` and `yaw_ENU = pi/2 - yaw_NED`. Heading is clockwise from North.
+- **Timestamps** in PX4 messages are in microseconds (`timestamp` field).
+- Offboard flights send `OffboardControlMode` and `TrajectorySetpoint` at more than 2 Hz, so
+  setpoints in `/fmu/in/trajectory_setpoint` are present in bags that record them. Useful for
+  the "setpoint" overlay and for telling OFFBOARD segments from manual ones.
+- Test flights for the viewer can be produced with the onboarding's `shape_control` exercise
+  (circle, ellipse, figure-eight in SITL), which gives known paths to check the 3D scene against.
+
+---
+
 ## Topic inventory of the team's bags
 
 From 19 bags (IMAV-26 set + PX4 SITL), counting how many bags contain each topic with data.

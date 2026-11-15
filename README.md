@@ -18,6 +18,10 @@ telemetry are separate parts of the team's ground control station, built by othe
 | [docs/decisions.md](docs/decisions.md) | Decision records (ADR-001 …) |
 | [docs/prototype-lessons.md](docs/prototype-lessons.md) | What the first prototype taught us, plus the topic inventory of our bags |
 
-**Platform:** Ubuntu 22.04, ROS 2 Humble (for reading bags), Qt 6 LTS, C++20.
+**Platform:** Ubuntu 24.04, ROS 2 Jazzy (for reading bags), Qt 6 LTS, C++20. Developed in a
+container built on the team's onboarding image `base-image:jazzy` (ADR-010).
+
+**Build and run:** build the team image first (`./build_container.sh` in `OpenHORYZN/base_image`),
+then `scripts/dev run`. Other commands: `build`, `test`, `smoke`, `format`, `shell`.
 
 The earlier Electron/Python prototype is kept at the git tag `prototype-electron`.

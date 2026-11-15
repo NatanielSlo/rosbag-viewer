@@ -42,14 +42,14 @@ Cesium Native (desk study only). Details and criteria: [architecture.md §4](arc
 it could only decode standard ROS types: sqlite3 bags do not contain the definitions of
 `mavros_msgs`, `px4_msgs` or `livox_ros_driver2`.
 
-**Decision.** Use `rosbag2_cpp` with ROS 2 Humble installed. All team message packages are then
+**Decision.** Use `rosbag2_cpp` with ROS 2 installed (Jazzy, see ADR-010). All team message packages are then
 available, so the viewer gets richer data (`/mavros/state` for armed and mode,
 `/mavros/statustext/recv`, waypoints).
 
-**Consequences.** Viewer machines need ROS 2 Humble (the team has it everywhere already).
+**Consequences.** Viewer machines need ROS 2 (the team image has it).
 
 ## ADR-004: Ubuntu 22.04 / ROS 2 Humble
-**Status:** Accepted for now; follows the team's migration plan
+**Status:** Superseded by ADR-010 (2026-11-15)
 
 **Context.** The whole infrastructure is on Ubuntu 22.04 with ROS 2 Humble. Humble reaches end
 of life in **May 2027**.
@@ -103,3 +103,23 @@ one drone behaves exactly as before.
 **Decision.** The UI is English only. Texts still go through Qt's `tr()` so a translation can
 be added later without code changes.
 
+
+## ADR-010: Ubuntu 24.04 / ROS 2 Jazzy, built on the team's image
+**Status:** Accepted (2026-11-15). Supersedes ADR-004.
+
+**Context.** ADR-004 assumed the team runs Humble on 22.04. The team's onboarding
+(`onboarding_tutorial.pdf`) shows otherwise: everything ROS 2, PX4 and Gazebo runs inside the
+Docker image built from `OpenHORYZN/base_image`, tagged `base-image:jazzy` (Ubuntu 24.04,
+ROS 2 Jazzy, PX4 v1.17). It already contains `rosbag2_cpp`, the mcap and zstd plugins, CMake,
+Ninja and colcon, but no Qt, no `mavros_msgs`, and `px4_msgs` only in each user's `/ros2_ws`.
+
+**Decision.** Target Jazzy / 24.04. The viewer's dev container is `FROM base-image:jazzy` and adds
+Qt 6.8 (aqtinstall), `mavros_msgs` and its own build of `px4_msgs` (`release/1.17`).
+
+**Consequences.**
+- The viewer builds against the same ROS as the drones, with no second ROS to maintain.
+- Bags recorded on Humble (sqlite3) must still open: use only stable `rosbag2_cpp` APIs and test
+  both storage formats with synthetic bags.
+- The team image must be built locally before the viewer image (30-60 min, once).
+- Ubuntu 24.04 blocks Chromium's sandbox through AppArmor ([prototype-lessons.md](prototype-lessons.md)),
+  which matters if the engine prototype picks CesiumJS in Qt WebEngine.

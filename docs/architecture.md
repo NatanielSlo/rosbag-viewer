@@ -62,14 +62,14 @@ UI language: **English**.
 
 ## 2. Technology stack
 
-The same base stack as the rest of the team's GCS (Ubuntu 22.04, ROS 2 Humble, Qt/C++), so
+The same base stack as the rest of the team's GCS (Ubuntu 24.04, ROS 2 Jazzy, Qt/C++), so
 the team can share knowledge, tooling and machines.
 
 | Concern | Choice | Notes |
 |---|---|---|
-| Platform | **Ubuntu 22.04** | Team infrastructure. Developers on other versions use the Docker devcontainer. |
-| ROS | **ROS 2 Humble**, used only to **read bags** | No nodes and no network. Humble's end of life (May 2027) is a team-wide topic, see ADR-004. |
-| Language / UI | **C++20, Qt 6 (Qt Quick / QML)**, current LTS (6.8 or newer) | Ubuntu 22.04's Qt is 6.2, so use the Qt installer or `aqtinstall`. Link Qt dynamically (LGPL). |
+| Platform | **Ubuntu 24.04** | Team infrastructure. Everything runs in the team's Docker image `base-image:jazzy`; the viewer's dev container is built on it (ADR-010). |
+| ROS | **ROS 2 Jazzy**, used only to **read bags** | No nodes and no network. Jazzy is supported until May 2029 (ADR-010). Older Humble bags (sqlite3) must keep opening. |
+| Language / UI | **C++20, Qt 6 (Qt Quick / QML)**, current LTS (6.8 or newer) | Ubuntu 24.04's Qt is 6.4, so use the Qt installer or `aqtinstall`. Link Qt dynamically (LGPL). |
 | Bag reading | **`rosbag2_cpp`** | Reads sqlite3 and mcap, compressed (zstd) or not, plus our message types (`px4_msgs`, `mavros_msgs`, …) when installed. Unknown message types are skipped, not fatal. |
 | 3D engine | **Decided by a prototype** (ADR-002) | osgEarth + Cesium Native, or CesiumJS inside Qt WebEngine. Indoor scene possibly Qt Quick 3D. |
 | Build | CMake (`ament_cmake`) in a colcon workspace | |
@@ -310,7 +310,7 @@ Turns "the camera saw something" into "**it was here**".
 | **B. CesiumJS in Qt WebEngine** | Full Cesium features, quick to build (the prototype already did it in a browser) | A web component inside a native app, with a second rendering stack |
 | **C. Qt Quick 3D + Cesium Native** | Modern Qt stack, one scene graph | We would write the 3D Tiles rendering ourselves (large job); desk study only |
 
-The prototype builds the same demo with A and B: a Qt 6 window on Ubuntu 22.04, Google 3D
+The prototype builds the same demo with A and B: a Qt 6 window on Ubuntu 24.04, Google 3D
 Tiles at a test site, a replayed GPS flight with a moving drone, attribution visible.
 
 It measures:
@@ -356,7 +356,7 @@ viewer/                   ament_cmake package (standalone application)
   qml/                    UI
   config/topics.yaml
   tests/
-docker/                   devcontainer (Ubuntu 22.04, Humble, Qt)
+docker/                   dev container (team image base-image:jazzy + Qt)
 docs/
 ```
 

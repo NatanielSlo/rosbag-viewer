@@ -13,7 +13,8 @@ Durations are rough estimates for one developer, for planning only. Re-estimate 
 ## Steps
 
 ### 0. Foundations (1 week)
-- Docker devcontainer: Ubuntu 22.04, ROS 2 Humble (+ `px4_msgs`, `mavros_msgs`), Qt 6 LTS,
+- Docker dev container on the team's `base-image:jazzy` (Ubuntu 24.04, ROS 2 Jazzy) plus
+  `px4_msgs` (branch `release/1.17`), `mavros_msgs`, Qt 6.8 LTS,
   GPU and display passthrough.
 - Colcon workspace with an empty `viewer` app (window + QML), `clang-format`, CI building and
   running tests on every push.
@@ -96,7 +97,7 @@ Durations are rough estimates for one developer, for planning only. Re-estimate 
 - Recording list behind a button: folder choice, search, sort by date, date/duration/size,
   drag and drop.
 - Settings (units, map layers, ion token), remembered window/panel layout.
-- Packaging for Ubuntu 22.04 (`.deb`), short user guide, release notes.
+- Packaging for Ubuntu 24.04 (`.deb`), short user guide, release notes.
 
 ### Later
 - Telemetry plots for any signal, flight summary, export (video of the replay, PDF/HTML report,

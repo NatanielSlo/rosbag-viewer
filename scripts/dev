@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# One entry point for building and running the viewer in the dev container.
+#   scripts/dev build    build the workspace
+#   scripts/dev run      build, then start the viewer (needs a display)
+#   scripts/dev test     build, then run all tests
+#   scripts/dev smoke    start the viewer headless, load the UI, exit 0 if it works
+#   scripts/dev format   run clang-format on all sources
+#   scripts/dev shell    interactive shell in the container
+#   scripts/dev image    (re)build the container image only
+set -euo pipefail
+cd "$(dirname "$0")/.."
+IMAGE=${VIEWER_IMAGE:-rosbag-viewer-dev}
+
+image() {
+  docker image inspect base-image:jazzy >/dev/null 2>&1 || {
+    echo "base-image:jazzy not found. Build the team image first (see .devcontainer/Dockerfile)." >&2
+    exit 1
+  }
+  docker build -t "$IMAGE" .devcontainer
+}
+in_container() {
+  local args=(--rm -v "$PWD":/workspace -w /workspace --device /dev/dri
+              --user "$(id -u):$(id -g)" -e HOME=/tmp/home --group-add video)
+  [[ -e /dev/dri/renderD128 ]] && args+=(--group-add "$(stat -c %g /dev/dri/renderD128)")
+  [[ -t 0 ]] && args+=(-it)
+  if [[ -n "${DISPLAY:-}" && -d /tmp/.X11-unix ]]; then
+    xhost +local: >/dev/null 2>&1 || true
+    args+=(-e DISPLAY -e QT_QPA_PLATFORM=xcb -v /tmp/.X11-unix:/tmp/.X11-unix)
+  fi
+  docker image inspect "$IMAGE" >/dev/null 2>&1 || image
+  docker run "${args[@]}" "$IMAGE" bash -c \
+    "mkdir -p /tmp/home && source /opt/ros/jazzy/setup.bash && source /opt/px4_ws/install/setup.bash && $*"
+}
+BUILD='cd ws && colcon build --cmake-args -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
+BIN='ws/install/viewer/lib/viewer/viewer'
+
+case "${1:-}" in
+  image)  image ;;
+  build)  in_container "$BUILD" ;;
+  run)    in_container "$BUILD && cd /workspace && $BIN" ;;
+  test)   in_container "$BUILD && colcon test --event-handlers console_direct+ && colcon test-result --verbose" ;;
+  smoke)  in_container "$BUILD && cd /workspace && QT_QPA_PLATFORM=offscreen $BIN --smoke-test" ;;
+  format) in_container "find ws/src -name '*.cpp' -o -name '*.h' | xargs clang-format -i" ;;
+  shell)  in_container bash ;;
+  *) sed -n '2,10p' "$0"; exit 1 ;;
+esac

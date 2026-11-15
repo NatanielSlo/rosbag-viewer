@@ -1,0 +1,13 @@
+{
+  "name": "3D Mission Viewer (Ubuntu 24.04, ROS 2 Jazzy, Qt 6)",
+  "build": { "dockerfile": "Dockerfile" },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "workspaceFolder": "/workspace",
+  "runArgs": ["--device=/dev/dri", "--group-add=video"],
+  "mounts": ["source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"],
+  "containerEnv": {
+    "DISPLAY": "${localEnv:DISPLAY}",
+    "QT_QPA_PLATFORM": "xcb"
+  },
+  "initializeCommand": "xhost +local: >/dev/null 2>&1 || true"
+}
