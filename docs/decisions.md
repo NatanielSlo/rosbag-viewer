@@ -24,7 +24,9 @@ rest of the team's GCS.
 and its lessons are in [prototype-lessons.md](prototype-lessons.md).
 
 ## ADR-002: 3D engine
-**Status:** Open, decided by the 3D prototype (development plan, step 1)
+**Status:** **Decided 2026-11-15: option B, CesiumJS in Qt WebEngine.** Prototype A (osgEarth) is paused, not deleted; its findings below stay as the record.
+
+**Consequences of choosing B.** The map view is a `WebEngineView` loading local assets over a custom `app://` scheme; the C++ side owns the clock and flight model and pushes poses/paths to the page (`scene.js`: `init`, `setFlight`, `setDrone`); the Qt UI (toolbar, panels, timeline) stays native QML on top; the attribution is kept visible by the page; offline falls back to a local scene (ADR-007); Chromium flags `--no-sandbox` are dev-container only.
 
 **Options.** (A) osgEarth + Cesium Native, (B) CesiumJS in Qt WebEngine, (C) Qt Quick 3D +
 Cesium Native (desk study only). Details and criteria: [architecture.md §4](architecture.md#4-3d-engine-options-decided-by-the-prototype-adr-002).
