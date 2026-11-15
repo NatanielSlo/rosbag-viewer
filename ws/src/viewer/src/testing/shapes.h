@@ -3,7 +3,7 @@
 // from the team onboarding (Task 2): path (x(t), y(t)) in PX4's NED frame, x = North, y = East.
 #include <cmath>
 
-namespace viewer::testing {
+namespace viewer::fixtures {
 
 enum class Shape { Circle, Ellipse, Eight };
 
@@ -52,4 +52,4 @@ struct FlightPlan {
     double climbRate = 1.0;  // m/s
 };
 
-}  // namespace viewer::testing
+}  // namespace viewer::fixtures

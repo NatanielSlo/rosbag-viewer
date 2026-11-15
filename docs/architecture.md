@@ -95,6 +95,9 @@ the team can share knowledge, tooling and machines.
 
 ### 3.1 BagSource
 - Opens a bag with `rosbag2_cpp`. Never writes to the bag's medium (bags live on USB sticks).
+  Implemented as `loadFlight(path)` in `src/bag/`: only standard types cross its interface, so
+  ROS stays inside the `viewer_bag` library. Errors are `BagError` with a message for the user.
+  The storage format is detected from `metadata.yaml`; message time is `recv_timestamp`.
 - On first open it builds a **summary index**: downsampled pose, attitude, angular rates,
   velocity, battery, GPS, flight-mode changes, arming, status messages, events and
   camera-frame timestamps. The index is cached on the local

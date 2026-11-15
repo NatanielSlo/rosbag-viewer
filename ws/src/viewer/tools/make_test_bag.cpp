@@ -19,7 +19,7 @@
 
 #include "testing/shapes.h"
 
-using namespace viewer::testing;
+using namespace viewer::fixtures;
 namespace msg = px4_msgs::msg;
 
 namespace {

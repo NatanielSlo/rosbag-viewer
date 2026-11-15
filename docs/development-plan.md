@@ -32,8 +32,15 @@ debugged (findings in [decisions.md, ADR-002](decisions.md#adr-002-3d-engine) an
 conversions and WGS84/ENU (`frames`), `ReplayClock`, `DroneTrack` with interpolation, dropout
 rule and flight-mode lookup, and the synthetic bag generator `make_test_bag` (PX4 topics, circle /
 ellipse / figure-eight from the onboarding, sqlite3 or mcap, optional GPS and namespace), with a
-test that reads its bags back with `rosbag2_cpp`. To do: `BagSource`, adapters and `topics.yaml`,
-drone detection by namespace, "Recording info", compressed and split test bags, performance
+test that reads its bags back with `rosbag2_cpp`. **First end-to-end pipeline works:** `loadFlight()`
+(`src/bag/`) reads a bag (sqlite3 and mcap, storage format detected from `metadata.yaml`), finds
+drones by topic namespace, runs a first PX4 adapter (local position, attitude, status; versioned
+topic names such as `_v1` accepted; invalid estimator samples skipped) and returns a `DroneTrack` per
+drone. Tests compare a synthetic circle flight against its known path (position within 5 cm,
+heading within about 1 degree) and check flight modes, namespaces and clear errors for a missing or
+non-bag folder. To do: summary index with on-disk cache and progress, `topics.yaml` and the
+MAVROS/team adapters, GPS (global position), battery and other signals, "Recording info",
+compressed and split bags, damaged bags (partial read is in, but untested), performance
 measurements.
 - `BagSource` (sqlite3, mcap, compressed, split bags), summary index with an on-disk cache,
   progress on first open, clear errors for broken bags.
