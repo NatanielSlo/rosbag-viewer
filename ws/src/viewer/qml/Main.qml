@@ -27,7 +27,7 @@ Window {
 
     function pushPath() { if (mapReady) web.runJavaScript(replay.pathScript()) }
     function pushPose() { if (mapReady) { var s = replay.poseScript(); if (s) web.runJavaScript(s) } }
-    function setCamera(m) { cameraMode = m === "follow" || m === "top" ? m : "free"; web.runJavaScript("camera('" + m + "')") }
+    function setCamera(m) { web.runJavaScript("camera('" + m + "')") }
     function view(a) { web.runJavaScript("view('" + a + "')") }
 
     Connections {
@@ -118,6 +118,7 @@ Window {
                 onJavaScriptConsoleMessage: function(level, message) {
                     if (message === "READY") win.mapReady = true
                     else if (message.indexOf("SEEK ") === 0) replay.seek(parseFloat(message.substring(5)))
+                    else if (message.indexOf("CAMERA ") === 0) win.cameraMode = message.substring(7)
                     else if (message.indexOf("FPS ") === 0) win.webFps = parseFloat(message.substring(4))
                     else if (message.indexOf("STATUS ") === 0) win.webStatus = message.substring(7)
                     else console.log("[web]", message)
@@ -170,7 +171,7 @@ Window {
                 Row {
                     id: vc; x: 8; y: 8; spacing: 4
                     Button { text: "Follow"; checkable: true; checked: win.cameraMode === "follow"; onClicked: win.setCamera("follow"); ToolTip.visible: hovered; ToolTip.text: "Follow the drone (F)" }
-                    Button { text: "Top"; checked: win.cameraMode === "top"; onClicked: win.setCamera("top"); ToolTip.visible: hovered; ToolTip.text: "Top-down, north up (T)" }
+                    Button { text: "Top"; onClicked: win.setCamera("top"); ToolTip.visible: hovered; ToolTip.text: "Top-down, north up (T)" }
                     Button { text: "Reset"; onClicked: win.setCamera("reset"); ToolTip.visible: hovered; ToolTip.text: "Reset view (R)" }
                     Button { text: "Whole flight"; onClicked: win.setCamera("zoom"); ToolTip.visible: hovered; ToolTip.text: "Zoom to the whole flight (Z)" }
                     Button { text: "+"; onClicked: win.view("in"); ToolTip.visible: hovered; ToolTip.text: "Zoom in (PageUp)" }

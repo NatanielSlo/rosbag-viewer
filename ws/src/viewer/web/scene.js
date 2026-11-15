@@ -6,7 +6,8 @@ let current = null;                 // [lon, lat, ellipsoid height, heading rad]
 let pathEntities = [];
 let pathPoints = [];                // [{t, mode, h, cart}] for click and hover
 let followMode = false;
-const follow = { heading: null, pitch: Cesium.Math.toRadians(-30), range: 60 };
+// Chase camera: angle relative to the drone's heading (0 = straight behind it), pitch, distance.
+const follow = { rel: 0, pitch: Cesium.Math.toRadians(-30), range: 60 };
 
 function notice(text) {
   const n = document.getElementById("notice");
@@ -53,7 +54,26 @@ async function init(token) {
   const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
   handler.setInputAction(m => { const p = nearestPathPoint(m.position); if (p) console.log("SEEK " + p.t); },
                          Cesium.ScreenSpaceEventType.LEFT_CLICK);
+  // Following: the left button drags the chase angle, the wheel changes the distance. The
+  // normal camera controls are switched off meanwhile; any other camera action leaves follow mode.
+  let dragging = false;
+  handler.setInputAction(() => { if (followMode) dragging = true; }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+  handler.setInputAction(() => { dragging = false; }, Cesium.ScreenSpaceEventType.LEFT_UP);
+  handler.setInputAction(() => { if (followMode) exitFollow(); }, Cesium.ScreenSpaceEventType.RIGHT_DOWN);
+  handler.setInputAction(() => { if (followMode) exitFollow(); }, Cesium.ScreenSpaceEventType.MIDDLE_DOWN);
+  handler.setInputAction(m => {   // touchpad / touch pinch zooms the chase view too
+    if (followMode && m.distance.endPosition.y > 0)
+      follow.range = Math.min(Math.max(follow.range * m.distance.startPosition.y / m.distance.endPosition.y, 5), 3000);
+  }, Cesium.ScreenSpaceEventType.PINCH_MOVE);
+  handler.setInputAction(d => {
+    if (followMode) follow.range = Math.min(Math.max(follow.range * (d > 0 ? 0.9 : 1 / 0.9), 5), 3000);
+  }, Cesium.ScreenSpaceEventType.WHEEL);
   handler.setInputAction(m => {
+    if (followMode && dragging) {
+      follow.rel += (m.endPosition.x - m.startPosition.x) * 0.005;
+      follow.pitch = Math.min(Math.max(follow.pitch - (m.endPosition.y - m.startPosition.y) * 0.005, -1.5), -0.05);
+      return;
+    }
     const p = nearestPathPoint(m.endPosition);
     if (!p) { tip.style.display = "none"; return; }
     tip.textContent = "t " + p.t.toFixed(1) + " s\n" + p.mode + "\n" + p.h.toFixed(0) + " m (ellipsoid)";
@@ -64,6 +84,11 @@ async function init(token) {
   viewer.camera.setView({
     destination: Cesium.Cartesian3.fromDegrees(11.6710, 48.2615, 700),
     orientation: { heading: 0, pitch: Cesium.Math.toRadians(-35), roll: 0 },
+  });
+
+  viewer.scene.preRender.addEventListener(() => {   // keeps the chase view glued to the drone
+    if (followMode && current)
+      viewer.camera.lookAt(cart(current), new Cesium.HeadingPitchRange(current[3] + follow.rel, follow.pitch, follow.range));
   });
 
   let frames = 0, last = performance.now();
@@ -118,13 +143,24 @@ function nearestPathPoint(pos) {
 function setDrone(p) {
   current = p;
   droneEntity.show = !!p;
-  if (p && followMode) {
-    viewer.camera.lookAt(cart(p), new Cesium.HeadingPitchRange(follow.heading ?? p[3], follow.pitch, follow.range));
-  }
+}
+
+function setFollow(on) {
+  const c = viewer.scene.screenSpaceCameraController;
+  followMode = on;
+  c.enableRotate = c.enableTilt = c.enableLook = c.enableZoom = !on;   // the page handles drag and wheel
+  console.log("CAMERA " + (on ? "follow" : "free"));
+}
+
+function exitFollow() {
+  if (!followMode) return;
+  setFollow(false);
+  viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);   // keep the view where it is, hand control back
 }
 
 function freeCamera() {
-  followMode = false;
+  viewer.camera.cancelFlight();
+  exitFollow();
   viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
 }
 
@@ -143,17 +179,19 @@ function camera(mode) {
   if (!viewer) return;
   if (mode === "zoom" || mode === "reset") return zoomToFlight();
   if (!current) return;
+  const wasFollowing = followMode;
   freeCamera();
+  if (mode === "follow" && wasFollowing) return;   // the button toggles: second press stops following
   const target = cart(current);
   if (mode === "top") {
     viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(target, 1), {
       duration: 1.0, offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 250) });
   } else if (mode === "follow") {
-    follow.heading = null;
+    follow.rel = 0;
     viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(target, 1), {
       duration: 1.0,
       offset: new Cesium.HeadingPitchRange(current[3], follow.pitch, follow.range),
-      complete: () => { followMode = true; },
+      complete: () => setFollow(true),
     });
   }
 }
@@ -162,17 +200,14 @@ function camera(mode) {
 function view(action) {
   if (!viewer) return;
   const c = viewer.camera;
-  const step = Math.max(c.positionCartographic.height * 0.05, 2);
-  if (followMode) {
-    const h = follow.heading ?? (current ? current[3] : 0);
-    if (action === "rotLeft") follow.heading = h - 0.1;
-    if (action === "rotRight") follow.heading = h + 0.1;
-    if (action === "up") follow.pitch = Math.min(follow.pitch + 0.08, -0.1);
-    if (action === "down") follow.pitch = Math.max(follow.pitch - 0.08, -1.5);
-    if (action === "in") follow.range = Math.max(follow.range * 0.85, 5);
-    if (action === "out") follow.range = Math.min(follow.range / 0.85, 2000);
-    return;
+  if (followMode) {   // rotate and zoom adjust the chase view; panning leaves follow mode
+    if (action === "rotLeft") return void (follow.rel -= 0.1);
+    if (action === "rotRight") return void (follow.rel += 0.1);
+    if (action === "in") return void (follow.range = Math.max(follow.range * 0.85, 5));
+    if (action === "out") return void (follow.range = Math.min(follow.range / 0.85, 3000));
+    exitFollow();
   }
+  const step = Math.max(c.positionCartographic.height * 0.05, 2);
   switch (action) {
     case "left": c.moveLeft(step); break;
     case "right": c.moveRight(step); break;
