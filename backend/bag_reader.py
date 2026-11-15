@@ -545,6 +545,16 @@ def _has_gps(topics: set[str]) -> bool:
         any(re.fullmatch(re.escape(px4.GLOBAL_BASE) + r"(_v\d+)?", t) for t in topics)
 
 
+def _size(path: Path) -> int:
+    """Bytes on disk (stat only, cheap even on a USB stick)."""
+    try:
+        if path.is_file():
+            return path.stat().st_size
+        return sum(f.stat().st_size for f in path.iterdir() if f.is_file())
+    except OSError:
+        return 0
+
+
 def bag_summary(path: str | Path) -> dict[str, Any]:
     """Cheap listing entry. Reads metadata.yaml only (no bag is opened)."""
     path = Path(path)
@@ -556,6 +566,8 @@ def bag_summary(path: str | Path) -> dict[str, Any]:
             n = int(m["message_count"])
             return {
                 "name": path.name, "path": str(path), "ok": n > 0,
+                "start_ns": int(m["starting_time"]["nanoseconds_since_epoch"]),
+                "size": _size(path),
                 "duration": round(m["duration"]["nanoseconds"] / 1e9, 1),
                 "messages": n, "has_pose": _has_pose(topics), "has_gps": _has_gps(topics),
                 "error": None if n else "Empty bag",
@@ -565,11 +577,13 @@ def bag_summary(path: str | Path) -> dict[str, Any]:
     try:  # mcap, split bags, missing/broken metadata: let the full reader judge
         reader = _open(path)
     except BagError as exc:
-        return {"name": path.name, "path": str(path), "ok": False, "error": str(exc)}
+        return {"name": path.name, "path": str(path), "ok": False, "error": str(exc),
+                "size": _size(path)}
     try:
         topics = {c.topic for c in reader.connections if c.msgcount > 0}
         return {
             "name": path.name, "path": str(path), "ok": reader.message_count > 0,
+            "start_ns": reader.start_time, "size": _size(path),
             "duration": round((reader.end_time - reader.start_time) / 1e9, 1),
             "messages": reader.message_count,
             "has_pose": _has_pose(topics), "has_gps": _has_gps(topics),

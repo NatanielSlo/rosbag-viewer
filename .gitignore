@@ -10,3 +10,4 @@ __pycache__/
 tests/data/*.mcap
 tests/data/*.db3
 .pytest_cache/
+screenshots/

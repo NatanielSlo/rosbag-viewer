@@ -128,3 +128,28 @@ def test_requests_for_a_foreign_host_are_refused(bags_dir):
     assert c.get("/api/config").status_code == 400
     assert c.get("/api/bags").status_code == 400
     assert local_client(bags_dir).get("/api/bags").status_code == 200
+
+
+def test_library_and_open_are_app_only(client, bags_dir, tmp_path):
+    """Without a token (plain browser), the readable folders cannot be changed."""
+    assert client.post("/api/library", json={"path": str(tmp_path)}).status_code == 403
+    assert client.post("/api/open", json={"path": str(tmp_path)}).status_code == 403
+
+
+def test_app_can_switch_library_and_open_outside_recordings(bags_dir, tmp_path, monkeypatch):
+    monkeypatch.setenv("VIEWER_TOKEN", "s3cret")
+    c = local_client(bags_dir)
+    h = {"X-Viewer-Token": "s3cret"}
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    lone = make_bag(other / "lone", {
+        "/mavros/local_position/pose": ("geometry_msgs/msg/PoseStamped", circle(20))})
+    # outside the library: refused until the user opens it
+    assert c.get("/api/flight", params={"path": str(lone)}, headers=h).status_code == 403
+    r = c.post("/api/open", json={"path": str(lone / "metadata.yaml")}, headers=h)
+    assert r.status_code == 200 and r.json()["ok"] and r.json()["path"] == str(lone)
+    assert c.get("/api/flight", params={"path": str(lone)}, headers=h).status_code == 200
+    # switching the library lists the new folder
+    r = c.post("/api/library", json={"path": str(other)}, headers=h)
+    assert [b["name"] for b in r.json()["bags"]] == ["lone"]
+    assert c.post("/api/library", json={"path": str(other / "nope")}, headers=h).status_code == 404

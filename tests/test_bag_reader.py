@@ -197,3 +197,9 @@ def test_errors_are_cached_so_damaged_bags_are_not_re_read(flight_bag, monkeypat
         with pytest.raises(br.BagError):
             br.load_flight(flight_bag)
     assert len(calls) == 1
+
+
+def test_summary_has_date_and_size_for_the_library(flight_bag):
+    s = br.bag_summary(flight_bag)
+    assert s["start_ns"] == T0
+    assert s["size"] > 0

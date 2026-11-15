@@ -10,10 +10,12 @@ from __future__ import annotations
 import argparse
 import os
 import secrets
+import threading
+import time
 from pathlib import Path
 
 import uvicorn
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -48,7 +50,9 @@ def setting(name: str) -> str:
 
 
 def make_app(bags_dir: Path, allowed_hosts: list[str] | None = None) -> FastAPI:
-    bags_dir = bags_dir.resolve()
+    # `library` is the folder listed in the app; `extra` holds single
+    # recordings the user opened from elsewhere (file dialog / drag and drop).
+    state = {"library": bags_dir.resolve(), "extra": set()}
     app = FastAPI(title="Rosbag viewer")
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts or ALLOWED_HOSTS)
     token = os.environ.get("VIEWER_TOKEN")
@@ -60,11 +64,24 @@ def make_app(bags_dir: Path, allowed_hosts: list[str] | None = None) -> FastAPI:
             raise HTTPException(401, "Missing or wrong token")
 
     def resolve(path: str) -> Path:
-        """Only serve bags that live under the configured bags directory."""
+        """Only serve bags under the library folder or ones the user opened."""
         p = Path(path).expanduser().resolve()
-        if bags_dir != p and bags_dir not in p.parents:
+        roots = [state["library"], *state["extra"]]
+        if not any(r == p or r in p.parents for r in roots):
             raise HTTPException(403, "Path is outside the bags directory")
         return p
+
+    def app_only() -> None:
+        """Changing what may be read is only allowed for the desktop app,
+        which always runs with a per-launch token."""
+        if not token:
+            raise HTTPException(403, "Only available in the desktop app")
+
+    def bag_dirs(root: Path) -> list[Path]:
+        if not root.is_dir():
+            return []
+        return sorted(d for d in root.iterdir() if d.is_dir() and (
+            (d / "metadata.yaml").exists() or any(d.glob("*.mcap")) or any(d.glob("*.db3"))))
 
     api = dict(dependencies=[Depends(check_token)])
 
@@ -86,12 +103,31 @@ def make_app(bags_dir: Path, allowed_hosts: list[str] | None = None) -> FastAPI:
 
     @app.get("/api/bags", **api)
     def list_bags():
-        found = sorted(
-            d for d in bags_dir.iterdir()
-            if d.is_dir() and ((d / "metadata.yaml").exists() or list(d.glob("*.mcap"))
-                               or list(d.glob("*.db3")))
-        ) if bags_dir.exists() else []
-        return {"dir": str(bags_dir), "bags": [br.bag_summary(d) for d in found]}
+        root = state["library"]
+        return {"dir": str(root), "exists": root.is_dir(),
+                "bags": [br.bag_summary(d) for d in bag_dirs(root)]}
+
+    @app.post("/api/library", dependencies=[Depends(check_token), Depends(app_only)])
+    def set_library(path: str = Body(..., embed=True)):
+        p = Path(path).expanduser().resolve()
+        if not p.is_dir():
+            raise HTTPException(404, "Folder not found")
+        state["library"] = p
+        return list_bags()
+
+    @app.post("/api/open", dependencies=[Depends(check_token), Depends(app_only)])
+    def open_recording(path: str = Body(..., embed=True)):
+        """Allow one recording outside the library (a bag folder, a file
+        inside one, or a single .mcap/.db3 file)."""
+        p = Path(path).expanduser().resolve()
+        if p.is_file() and p.suffix not in (".mcap", ".db3") or p.name == "metadata.yaml":
+            p = p.parent
+        if p.is_file() and p.suffix == ".db3":
+            p = p.parent  # rosbag2 sqlite bags need their folder
+        if not p.exists():
+            raise HTTPException(404, "File or folder not found")
+        state["extra"].add(p)
+        return br.bag_summary(p)
 
     @app.get("/api/flight", **api)
     def flight(path: str = Query(...)):
@@ -125,11 +161,27 @@ def make_app(bags_dir: Path, allowed_hosts: list[str] | None = None) -> FastAPI:
     return app
 
 
+def exit_with_parent(pid: int) -> None:
+    """Started by the desktop app: quit when it is gone (even after a crash),
+    so no orphaned server keeps the port and the USB stick busy."""
+    def watch() -> None:
+        while True:
+            time.sleep(2)
+            try:
+                os.kill(pid, 0)
+            except OSError:
+                os._exit(0)
+    threading.Thread(target=watch, daemon=True).start()
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--bags", default=os.environ.get("ROSBAG_DIR", str(ROOT.parent / "bags")))
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--parent-pid", type=int, help="exit when this process ends")
     args = ap.parse_args()
+    if args.parent_pid:
+        exit_with_parent(args.parent_pid)
     uvicorn.run(make_app(Path(args.bags)), host="127.0.0.1", port=args.port, log_level="info")
 
 
