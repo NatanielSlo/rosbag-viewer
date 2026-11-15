@@ -34,11 +34,25 @@ Cesium Native (desk study only). Details and criteria: [architecture.md §4](arc
 | | B: CesiumJS in Qt WebEngine | A: osgEarth + cesium-native |
 |---|---|---|
 | Build effort | About 150 lines plus the page; no extra build | cesium-native v0.37.0 (3.5 min) + osgEarth 3.8.1 from source; **OpenSceneGraph must also be built from source with GL3** |
-| Works in Qt Quick | Yes, with a native Qt overlay on top | Needs OpenGL; Qt Quick 6 always creates a Core context (see below) |
-| Frame rate | 48-56 fps with tiles, 60 bare | not measured yet |
-| Memory (all processes) | about 460 MB bare, 740-830 MB with tiles after 1 min | not measured yet |
+| Works in Qt Quick | Yes, with a native Qt overlay on top | Yes, after four fixes (below): the Google tiles render at Garching with the Qt overlay on top |
+| Frame rate | 48-56 fps with tiles, 60 bare | 61 fps with tiles (vsync-limited) |
+| Memory (all processes) | about 460 MB bare, 740-830 MB with tiles after 1 min | about 665 MB with tiles, steady over 60 s |
 | No internet | Starts; tiles fail; shows a plain globe and a notice | not measured yet |
-| Attribution | Shown by Cesium (bottom-left) | Needs `CesiumCreditsNode`; the API takes ownership of a pointer osgEarth's own context still owns, so the node must be leaked on purpose to avoid a double free |
+| Attribution | Shown by Cesium (bottom-left) | **Not shown yet** (unsolved);  Needs `CesiumCreditsNode`; the API takes ownership of a pointer osgEarth's own context still owns, so the node must be leaked on purpose to avoid a double free |
+
+Integration requirements found for A (all four were needed before anything rendered):
+1. OpenSceneGraph built from source with `OPENGL_PROFILE=GL3` (Ubuntu's is GL2 and fails).
+2. After `osgEarth::initialize()` and loading the earth file, **re-bind Qt's GL context**
+   (`doneCurrent()` then `makeCurrent(surface)`). osgEarth creates and releases a temporary
+   context to probe the GPU, which leaves no context current while Qt still believes its own is.
+   Symptom: every shader fails with an empty compiler log, Qt's included, and `glGetString` returns "".
+3. Enable OSG's GL3 state (`setUseVertexAttributeAliasing`, `setUseModelViewAndProjectionUniforms`).
+4. `QQuickFramebufferObject::setMirrorVertically(true)`, otherwise the map is upside down.
+
+Still open in prototype A: the Google attribution is not drawn, and the drone and trail are not
+visible (custom geometry in a Core context; the per-frame GL errors `invalid enumerant` and
+`invalid value` come from fixed-function state such as `GL_LIGHTING` and wide lines, which do not
+exist in Core). Offline behaviour is not measured yet.
 
 Other findings:
 - Ubuntu's OpenSceneGraph (3.6.5) is a GL2 (fixed-function) build. Qt Quick 6 always creates a

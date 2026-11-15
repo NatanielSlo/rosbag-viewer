@@ -46,7 +46,9 @@ if(rosbag2_cpp_FOUND AND rosbag2_compression_FOUND AND px4_msgs_FOUND AND rclcpp
   target_include_directories(make_test_bag PRIVATE src)
   ament_target_dependencies(make_test_bag rosbag2_cpp rosbag2_compression px4_msgs mavros_msgs
                            geometry_msgs sensor_msgs rclcpp)
-  install(TARGETS make_test_bag RUNTIME DESTINATION lib/${PROJECT_NAME})
+  add_executable(bag_info tools/bag_info.cpp)
+  target_link_libraries(bag_info viewer_bag)
+  install(TARGETS make_test_bag bag_info RUNTIME DESTINATION lib/${PROJECT_NAME})
 else()
   message(WARNING "rosbag2_cpp/px4_msgs not found: skipping make_test_bag and its test")
 endif()

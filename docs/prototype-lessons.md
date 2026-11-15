@@ -98,6 +98,12 @@ checking for production use.
   accept `PROTO_SCREENSHOT=/path.png` and save the window with `grabToImage`. Do not open test
   windows on the user's screen without telling them: a stock `osgearth_viewer` window left on
   the screen looked like a bug to the user.
+- **Embedding osgEarth in Qt Quick (prototype A):** four things must all be right before anything
+  renders: OSG built with GL3; Qt's GL context re-bound after osgEarth initializes (osgEarth probes
+  the GPU with a temporary context and leaves none current); OSG's GL3 state flags; and
+  `setMirrorVertically(true)` on the framebuffer item. The tell-tale of the second one is every
+  shader failing with an empty log and `glGetString(GL_VERSION)` returning an empty string. Test the
+  stock `osgearth_viewer` first: if it renders and your embedding does not, the libraries are fine.
 - **Shared build folders:** CMake caches whether it found a library. Use separate build and
   install folders per image (`scripts/dev` uses `build_osg`/`install_osg` for the osgEarth image).
 - **Background jobs:** a background command's exit code is the last command's (`tail` hides a

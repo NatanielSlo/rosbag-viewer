@@ -7,6 +7,10 @@
 #include <QQuickWindow>
 #include <QWheelEvent>
 
+#include <QDebug>
+#include <QOpenGLContext>
+#include <QOpenGLFunctions>
+#include <osg/GLExtensions>
 #include <osg/Geometry>
 #include <osg/LineWidth>
 #include <osg/MatrixTransform>
@@ -28,7 +32,7 @@
 
 OsgEarthItem::OsgEarthItem(QQuickItem* parent) : QQuickFramebufferObject(parent) {
     setAcceptedMouseButtons(Qt::AllButtons);
-    setMirrorVertically(false);
+    setMirrorVertically(true);  // OpenGL framebuffers are bottom-up
 }
 
 void OsgEarthItem::setPose(double lon, double lat, double alt, double heading) {
@@ -129,6 +133,11 @@ public:
 
 private:
     void init() {
+        // osgEarth (and OSG plugins) may create a temporary offscreen context to query the GPU and
+        // then release it, which leaves NO context current behind Qt's back. Remember Qt's
+        // context and bind it again once osgEarth is set up.
+        QOpenGLContext* qtContext = QOpenGLContext::currentContext();
+        QSurface* qtSurface = qtContext->surface();
         osgEarth::initialize();
         viewer_ = new osgViewer::Viewer;
         viewer_->setThreadingModel(osgViewer::ViewerBase::SingleThreaded);
@@ -162,6 +171,8 @@ private:
         // (it wraps it in a second shared_ptr), so we must never let it be destroyed:
         // we leak one reference on purpose to avoid a double free at exit.
         auto ctx = osgEarth::Cesium::CesiumIon::instance().getContext("");
+        qWarning() << "DIAG credits: context" << (void*)ctx << "creditSystem"
+                   << (ctx ? (void*)ctx->creditSystem.get() : nullptr);
         if (ctx && ctx->creditSystem) {
             auto* credits =
                 new osgEarth::Cesium::CesiumCreditsNode(viewer_.get(), ctx->creditSystem.get());
@@ -170,10 +181,39 @@ private:
         }
         viewer_->setSceneData(root_);
         viewer_->realize();
-        if (mapNode_) {  // initial viewpoint
+        if (qEnvironmentVariableIsSet("PROTO_DIAG")) diagnose();  // before re-binding
+        qtContext->doneCurrent();
+        qtContext->makeCurrent(qtSurface);
+        if (qEnvironmentVariableIsSet("PROTO_DIAG")) diagnose();  // after re-binding
+        if (mapNode_) {                                           // initial viewpoint
             manip->setViewpoint(
                 osgEarth::Viewpoint("Garching", 11.6710, 48.2615, 520.0, 0.0, -35.0, 700.0), 0.0);
         }
+    }
+
+    // Debug: does the current context compile a trivial shader, and what does OSG think of it?
+    void diagnose() {
+        QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
+        const auto fmt = QOpenGLContext::currentContext()->format();
+        qWarning() << "DIAG context" << fmt.majorVersion() << fmt.minorVersion() << "profile"
+                   << int(fmt.profile()) << "GL_VERSION" << (const char*)f->glGetString(GL_VERSION);
+        const char* src = "#version 330 core\nvoid main(){ gl_Position = vec4(0.0); }\n";
+        GLuint sh = f->glCreateShader(GL_VERTEX_SHADER);
+        f->glShaderSource(sh, 1, &src, nullptr);
+        f->glCompileShader(sh);
+        GLint ok = 0;
+        f->glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
+        char log[512] = {0};
+        f->glGetShaderInfoLog(sh, 511, nullptr, log);
+        qWarning() << "DIAG raw Qt compile ok=" << ok << "log=" << log << "glError"
+                   << f->glGetError();
+        f->glDeleteShader(sh);
+        auto* ext = osg::GLExtensions::Get(gw_->getState()->getContextID(), true);
+        qWarning() << "DIAG OSG ctx" << gw_->getState()->getContextID() << "glCompileShader ptr"
+                   << (void*)ext->glCompileShader << "glGetShaderiv" << (void*)ext->glGetShaderiv
+                   << "glGetShaderInfoLog" << (void*)ext->glGetShaderInfoLog << "glsl"
+                   << ext->glslLanguageVersion << "glVersion" << ext->glVersion << "aliasing"
+                   << gw_->getState()->getUseVertexAttributeAliasing();
     }
 
     void buildDrone() {
