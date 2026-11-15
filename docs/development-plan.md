@@ -42,9 +42,13 @@ non-bag folder. **Compressed (zstd) and split bags** open in both storage format
 chosen from `metadata.yaml`; tests prove the bags really are compressed and split). The adapter
 also reads GPS (ellipsoid heights, plus the local frame's reference point), battery, armed state and
 speeds, skipping PX4's "invalid" markers (`remaining = -1`, `voltage = 0`).
+"Recording info" is in (`describeRecording()`, `src/bag/recordinginfo.*`): per drone, each kind of data
+is Found, NoSamples (topic present but nothing usable, e.g. estimator never valid) or NotInBag, with
+the topic and sample count or what the missing data disables; plus topics the viewer does not use
+and whole-recording warnings.
 To do: summary index with on-disk cache and progress, `topics.yaml` and the MAVROS/team adapters,
-rates (`VehicleAngularVelocity`), "Recording info", damaged bags (partial read is in, but untested),
-performance measurements.
+rates (`VehicleAngularVelocity`), damaged bags (partial read is in, but untested), performance
+measurements.
 - `BagSource` (sqlite3, mcap, compressed, split bags), summary index with an on-disk cache,
   progress on first open, clear errors for broken bags.
 - Adapters: PX4, MAVROS, team topics; `topics.yaml` with defaults. Unknown types are skipped.

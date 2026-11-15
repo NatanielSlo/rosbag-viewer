@@ -57,6 +57,7 @@ struct RawDrone {
     std::map<std::string, ScalarSeries> signals;
     std::vector<GpsSample> gps;
     std::optional<Geodetic> origin;
+    DroneSources sources;
 };
 
 }  // namespace
@@ -133,6 +134,7 @@ FlightData loadFlight(const std::string& path) {
             RawDrone& d = raw[namespaceOf(topic)];
 
             if (isTopic(topic, "vehicle_local_position")) {
+                d.sources.position = topic;
                 const auto lp = deserialize<msg::VehicleLocalPosition>(*m);
                 if (!lp.xy_valid || !lp.z_valid) continue;  // estimator not valid yet (L5)
                 d.positions.push_back({t, nedToEnu({lp.x, lp.y, lp.z})});
@@ -141,20 +143,24 @@ FlightData loadFlight(const std::string& path) {
                 if (!d.origin && lp.xy_global && lp.z_global)
                     d.origin = Geodetic{lp.ref_lat, lp.ref_lon, lp.ref_alt};
             } else if (isTopic(topic, "vehicle_attitude")) {
+                d.sources.attitude = topic;
                 const auto va = deserialize<msg::VehicleAttitude>(*m);
                 d.attitudes.addSample(
                     {t, {}, attitudeFrdNedToFluEnu({va.q[0], va.q[1], va.q[2], va.q[3]})});
             } else if (isTopic(topic, "vehicle_status")) {
+                d.sources.status = topic;
                 const auto vs = deserialize<msg::VehicleStatus>(*m);
                 const std::string mode = px4ModeName(vs.nav_state);
                 if (d.modes.empty() || d.modes.back().mode != mode) d.modes.push_back({t, mode});
                 d.signals["armed"].add(t,
                                        vs.arming_state == msg::VehicleStatus::ARMING_STATE_ARMED);
             } else if (isTopic(topic, "vehicle_global_position")) {
+                d.sources.gps = topic;
                 const auto gp = deserialize<msg::VehicleGlobalPosition>(*m);
                 if (gp.lat_lon_valid && gp.alt_valid)
                     d.gps.push_back({t, {gp.lat, gp.lon, gp.alt_ellipsoid}});
             } else if (isTopic(topic, "battery_status")) {
+                d.sources.battery = topic;
                 const auto bs = deserialize<msg::BatteryStatus>(*m);
                 // PX4 marks "unknown" with -1 (remaining) and 0 (voltage)
                 if (bs.remaining >= 0.f && bs.remaining <= 1.f)
@@ -177,8 +183,10 @@ FlightData loadFlight(const std::string& path) {
         for (auto& [name, series] : d.signals) track.signal(name) = std::move(series);
         for (const auto& g : d.gps) track.addGps(g);
         if (d.origin) track.setOrigin(*d.origin);
-        if (!track.empty() || !track.modeChanges().empty() || !track.signals().empty())
+        if (!track.empty() || !track.modeChanges().empty() || !track.signals().empty()) {
             out.drones.emplace(ns, std::move(track));
+            out.sources.emplace(ns, d.sources);
+        }
     }
     return out;
 }

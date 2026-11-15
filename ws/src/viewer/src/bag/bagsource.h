@@ -22,6 +22,11 @@ struct TopicInfo {
     uint64_t count = 0;
 };
 
+// Which topic each kind of data came from, per drone (empty = not found in the bag).
+struct DroneSources {
+    std::string position, attitude, status, gps, battery;
+};
+
 struct FlightData {
     std::string path;
     int64_t startNs = 0;  // receive time of the first message (wall clock, ns)
@@ -29,6 +34,7 @@ struct FlightData {
     std::vector<TopicInfo> topics;  // everything in the bag, also what the viewer does not use
     // One track per drone, keyed by topic namespace ("" for a bag without namespaces).
     std::map<std::string, DroneTrack> drones;
+    std::map<std::string, DroneSources> sources;  // same keys as `drones`
 };
 
 // Time base: the bag's receive time, in seconds since the first message (docs/architecture.md 3.1).
