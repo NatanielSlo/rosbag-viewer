@@ -121,5 +121,11 @@ Qt 6.8 (aqtinstall), `mavros_msgs` and its own build of `px4_msgs` (`release/1.1
 - Bags recorded on Humble (sqlite3) must still open: use only stable `rosbag2_cpp` APIs and test
   both storage formats with synthetic bags.
 - The team image must be built locally before the viewer image (30-60 min, once).
+- **Host OS (to confirm):** the user says the team's laptops, including the dev laptop, run
+  Ubuntu 22.04, but the dev laptop reports 24.04.5 (`/etc/os-release`, 2026-11-15). The onboarding
+  supports both hosts. Because ROS and the viewer run in the container, the host OS only matters
+  for packaging: a native `.deb` built on 24.04 cannot be installed on 22.04, and Jazzy has no
+  native 22.04 packages. If hosts are 22.04, ship the viewer as a container image (or build a
+  separate Humble variant).
 - Ubuntu 24.04 blocks Chromium's sandbox through AppArmor ([prototype-lessons.md](prototype-lessons.md)),
   which matters if the engine prototype picks CesiumJS in Qt WebEngine.

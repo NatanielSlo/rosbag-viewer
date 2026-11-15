@@ -97,7 +97,7 @@ Durations are rough estimates for one developer, for planning only. Re-estimate 
 - Recording list behind a button: folder choice, search, sort by date, date/duration/size,
   drag and drop.
 - Settings (units, map layers, ion token), remembered window/panel layout.
-- Packaging for Ubuntu 24.04 (`.deb`), short user guide, release notes.
+- Packaging: container image vs `.deb`, decided once the hosts' Ubuntu version is confirmed (ADR-010), short user guide, release notes.
 
 ### Later
 - Telemetry plots for any signal, flight summary, export (video of the replay, PDF/HTML report,
@@ -119,5 +119,6 @@ Durations are rough estimates for one developer, for planning only. Re-estimate 
    today), and at least one real outdoor GPS flight and one multi-drone bag.
 3. **Performance targets:** confirm or adjust the proposed numbers after step 2.
 4. **Viewer machines:** which laptops/GPUs must run it smoothly (baseline: Intel Iris Xe).
-5. **Distribution:** how teammates install and update it (`.deb` from a shared location,
+5. **Host Ubuntu version and distribution:** the team says 22.04, the dev laptop reports 24.04. Decides between a container image and a `.deb` (ADR-010).
+   Distribution: how teammates install and update it (`.deb` from a shared location,
    an apt repository, …).

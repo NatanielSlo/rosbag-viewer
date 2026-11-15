@@ -17,11 +17,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 \
       libxcb-xkb1 libxkbcommon0 libfontconfig1 libdbus-1-3 libvulkan1 \
       mesa-vulkan-drivers libgl1-mesa-dri mesa-utils xvfb \
+      libnss3 libasound2t64 libxcomposite1 libxdamage1 libxrandr2 libxtst6 libxkbfile1 \
+      libdrm2 libgbm1 libxshmfence1 libxfixes3 libxcursor1 libxi6 libpulse0 libcups2t64 \
  && rm -rf /var/lib/apt/lists/*
 
 # Qt 6 LTS. Ubuntu 24.04 ships 6.4, so install 6.8 with aqtinstall. Linked dynamically (LGPL).
 RUN pip3 install --no-cache-dir --break-system-packages aqtinstall \
- && aqt install-qt linux desktop ${QT_VERSION} linux_gcc_64 -O /opt/Qt -m qtquick3d \
+ && aqt install-qt linux desktop ${QT_VERSION} linux_gcc_64 -O /opt/Qt -m qtquick3d qtwebengine qtwebchannel qtpositioning \
  && pip3 uninstall -y --break-system-packages aqtinstall
 ENV QT_ROOT=/opt/Qt/${QT_VERSION}/gcc_64
 ENV CMAKE_PREFIX_PATH=${QT_ROOT}

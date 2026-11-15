@@ -5,6 +5,7 @@
 #   scripts/dev test     build, then run all tests
 #   scripts/dev smoke    start the viewer headless, load the UI, exit 0 if it works
 #   scripts/dev format   run clang-format on all sources
+#   scripts/dev proto <name>  build, then run a Step 1 prototype (ws/src/prototypes/<name>)
 #   scripts/dev shell    interactive shell in the container
 #   scripts/dev image    (re)build the container image only
 set -euo pipefail
@@ -20,7 +21,10 @@ image() {
 }
 in_container() {
   local args=(--rm -v "$PWD":/workspace -w /workspace --device /dev/dri
-              --user "$(id -u):$(id -g)" -e HOME=/tmp/home --group-add video)
+              --user "$(id -u):$(id -g)" -e HOME=/tmp/home --group-add video
+              -e CESIUM_ION_TOKEN
+              # Chromium's sandbox needs privileges a container does not have (dev only)
+              -e QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox)
   [[ -e /dev/dri/renderD128 ]] && args+=(--group-add "$(stat -c %g /dev/dri/renderD128)")
   [[ -t 0 ]] && args+=(-it)
   if [[ -n "${DISPLAY:-}" && -d /tmp/.X11-unix ]]; then
@@ -40,6 +44,7 @@ case "${1:-}" in
   run)    in_container "$BUILD && cd /workspace && $BIN" ;;
   test)   in_container "$BUILD && colcon test --event-handlers console_direct+ && colcon test-result --verbose" ;;
   smoke)  in_container "$BUILD && cd /workspace && QT_QPA_PLATFORM=offscreen $BIN --smoke-test" ;;
+  proto)  in_container "$BUILD && cd /workspace && ws/src/prototypes/${2:?name}/fetch_cesium.sh && ws/install/${2}/lib/${2}/${2}" ;;
   format) in_container "find ws/src -name '*.cpp' -o -name '*.h' | xargs clang-format -i" ;;
   shell)  in_container bash ;;
   *) sed -n '2,10p' "$0"; exit 1 ;;
