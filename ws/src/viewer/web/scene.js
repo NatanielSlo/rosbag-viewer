@@ -54,12 +54,13 @@ async function init(token) {
   const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
   handler.setInputAction(m => { const p = nearestPathPoint(m.position); if (p) console.log("SEEK " + p.t); },
                          Cesium.ScreenSpaceEventType.LEFT_CLICK);
-  // Following: the left button drags the chase angle, the wheel changes the distance. The
+  // Following: the left or right button drags the chase angle, the wheel changes the distance. The
   // normal camera controls are switched off meanwhile; any other camera action leaves follow mode.
   let dragging = false;
   handler.setInputAction(() => { if (followMode) dragging = true; }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
   handler.setInputAction(() => { dragging = false; }, Cesium.ScreenSpaceEventType.LEFT_UP);
-  handler.setInputAction(() => { if (followMode) exitFollow(); }, Cesium.ScreenSpaceEventType.RIGHT_DOWN);
+  handler.setInputAction(() => { if (followMode) dragging = true; }, Cesium.ScreenSpaceEventType.RIGHT_DOWN);
+  handler.setInputAction(() => { dragging = false; }, Cesium.ScreenSpaceEventType.RIGHT_UP);
   handler.setInputAction(() => { if (followMode) exitFollow(); }, Cesium.ScreenSpaceEventType.MIDDLE_DOWN);
   handler.setInputAction(m => {   // touchpad / touch pinch zooms the chase view too
     if (followMode && m.distance.endPosition.y > 0)
