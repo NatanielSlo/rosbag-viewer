@@ -108,8 +108,12 @@ Durations are rough estimates for one developer, for planning only. Re-estimate 
 ---
 
 ## Open questions
-1. **Detection format:** does `/mission_2/yolo/detections` carry bounding boxes and the
-   source camera? Needed for placing detections in the world (step 5).
+1. **Detection format:** the message wrapper is known (checked 2026-11-15):
+   `{"frame_id": "downward_camera_optical_frame", "stamp": {...}, "count": N, "detections": [...]}`,
+   so the **source camera is known**. But every detection list in the IMAV-26 bags is empty,
+   so the fields of a single detection (bounding box? class? confidence?) are unknown. They are
+   defined in `drone_autonomy/mission_2/yolo_node.py`, whose source is not on the laptop or the
+   USB stick. Ask the author, and record one bag with real detections for testing (step 5).
 2. **Test data:** where to keep a shared set of real bags (the IMAV-26 set is on a USB stick
    today), and at least one real outdoor GPS flight and one multi-drone bag.
 3. **Performance targets:** confirm or adjust the proposed numbers after step 2.

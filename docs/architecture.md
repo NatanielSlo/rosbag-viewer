@@ -279,7 +279,8 @@ Turns "the camera saw something" into "**it was here**".
 - Markers are clickable: jump to the moment of the best detection and show that camera frame.
 - **List** in the Analysis panel (class, position, time, confidence), exportable to CSV.
 - **Needs:** the detection message must carry a box (pixel coordinates) and the camera it came
-  from. The current JSON format is to be checked. If boxes are missing, detections stay a
+  from. The current JSON wrapper already names the camera (`frame_id`); the per-detection fields
+  are still unknown (see development plan, open question 1). If boxes are missing, detections stay a
   text list and markers are placed under the drone, marked as approximate.
 - **Accuracy:** placement depends on pose accuracy, time sync and the ground assumption. The
   uncertainty is shown (marker size) instead of being hidden.
