@@ -1,6 +1,7 @@
 // Writes a synthetic PX4-style flight as a rosbag2 (sqlite3 or mcap), for tests and demos.
 //   make_test_bag --out DIR [--storage sqlite3|mcap] [--shape circle|ellipse|eight]
 //                 [--duration 60] [--gps LAT LON ALT_AMSL] [--namespace /drone1]
+//                 [--compress] [--split-bytes N]
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -8,12 +9,14 @@
 #include <memory>
 #include <string>
 
+#include <px4_msgs/msg/battery_status.hpp>
 #include <px4_msgs/msg/vehicle_attitude.hpp>
 #include <px4_msgs/msg/vehicle_global_position.hpp>
 #include <px4_msgs/msg/vehicle_local_position.hpp>
 #include <px4_msgs/msg/vehicle_status.hpp>
 #include <rclcpp/serialization.hpp>
 #include <rclcpp/time.hpp>
+#include <rosbag2_compression/sequential_compression_writer.hpp>
 #include <rosbag2_cpp/writer.hpp>
 #include <rosbag2_storage/storage_options.hpp>
 
@@ -30,6 +33,8 @@ struct Options {
     double duration = 60;
     bool gps = false;
     double lat = 48.2655, lon = 11.6710, alt = 480.0;
+    bool compress = false;
+    uint64_t splitBytes = 0;
 };
 
 template <class T>
@@ -54,6 +59,10 @@ int main(int argc, char** argv) {
             o.storage = next();
         else if (a == "--namespace")
             o.ns = next();
+        else if (a == "--compress")
+            o.compress = true;
+        else if (a == "--split-bytes")
+            o.splitBytes = std::strtoull(next(), nullptr, 10);
         else if (a == "--duration")
             o.duration = std::atof(next());
         else if (a == "--shape") {
@@ -80,7 +89,17 @@ int main(int argc, char** argv) {
     rosbag2_storage::StorageOptions so;
     so.uri = o.out;
     so.storage_id = o.storage;
-    rosbag2_cpp::Writer writer;
+    so.max_bagfile_size = o.splitBytes;  // 0 = one file
+    std::unique_ptr<rosbag2_cpp::Writer> writerPtr;
+    if (o.compress) {
+        rosbag2_compression::CompressionOptions co{"zstd",
+                                                   rosbag2_compression::CompressionMode::FILE};
+        writerPtr = std::make_unique<rosbag2_cpp::Writer>(
+            std::make_unique<rosbag2_compression::SequentialCompressionWriter>(co));
+    } else {
+        writerPtr = std::make_unique<rosbag2_cpp::Writer>();
+    }
+    rosbag2_cpp::Writer& writer = *writerPtr;
     writer.open(so);
 
     const int64_t t0 = 1'780'000'000LL * 1'000'000'000LL;  // arbitrary fixed start (2026)
@@ -149,6 +168,14 @@ int main(int argc, char** argv) {
                 float(o.alt + 47.0 + alt);  // Munich: ellipsoid is ~47 m above AMSL (L8)
             gp.lat_lon_valid = gp.alt_valid = true;
             put(writer, gp, o.ns + "/fmu/out/vehicle_global_position", ns);
+        }
+        if (step % 50 == 0) {  // 1 Hz: 100% -> 80% and 16.8 -> 15.6 V over the flight
+            msg::BatteryStatus bs;
+            bs.timestamp = us;
+            bs.connected = true;
+            bs.remaining = float(1.0 - 0.2 * t / o.duration);
+            bs.voltage_v = float(16.8 - 1.2 * t / o.duration);
+            put(writer, bs, o.ns + "/fmu/out/battery_status_v1", ns);
         }
         if (step % 25 == 0) {  // 2 Hz
             msg::VehicleStatus vs;

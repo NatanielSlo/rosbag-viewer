@@ -38,10 +38,13 @@ drones by topic namespace, runs a first PX4 adapter (local position, attitude, s
 topic names such as `_v1` accepted; invalid estimator samples skipped) and returns a `DroneTrack` per
 drone. Tests compare a synthetic circle flight against its known path (position within 5 cm,
 heading within about 1 degree) and check flight modes, namespaces and clear errors for a missing or
-non-bag folder. To do: summary index with on-disk cache and progress, `topics.yaml` and the
-MAVROS/team adapters, GPS (global position), battery and other signals, "Recording info",
-compressed and split bags, damaged bags (partial read is in, but untested), performance
-measurements.
+non-bag folder. **Compressed (zstd) and split bags** open in both storage formats (the reader is
+chosen from `metadata.yaml`; tests prove the bags really are compressed and split). The adapter
+also reads GPS (ellipsoid heights, plus the local frame's reference point), battery, armed state and
+speeds, skipping PX4's "invalid" markers (`remaining = -1`, `voltage = 0`).
+To do: summary index with on-disk cache and progress, `topics.yaml` and the MAVROS/team adapters,
+rates (`VehicleAngularVelocity`), "Recording info", damaged bags (partial read is in, but untested),
+performance measurements.
 - `BagSource` (sqlite3, mcap, compressed, split bags), summary index with an on-disk cache,
   progress on first open, clear errors for broken bags.
 - Adapters: PX4, MAVROS, team topics; `topics.yaml` with defaults. Unknown types are skipped.
@@ -66,6 +69,10 @@ measurements.
   table works.
 
 ### 3b. Instruments and telemetry (1–2 weeks)
+**Data layer done early (2026-11-15):** `telemetryAt(track, t)` (`src/model/telemetry.*`) gives
+altitude, ground/vertical speed, distance from home, heading, battery, armed state and flight time,
+each empty ("—") when there is no data near *t*; unit-tested, and tested end to end from a bag.
+Not started: attitude indicator and compass widgets, rates, status line and warnings, mission step.
 - Attitude indicator, compass rose with heading and direction to home.
 - Telemetry values: altitude, horizontal/vertical speed, distance from home, heading,
   roll/pitch/yaw rates, battery, flight time, mission step. Status line and warnings.

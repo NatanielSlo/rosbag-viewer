@@ -131,6 +131,10 @@ a preference list per signal, because names differ between bags (L4).
   sample for up to `maxGap` and then returns nothing, so the UI shows "—" and the path is not
   drawn as a straight line through a LIO or GPS dropout.
 - Attitudes are interpolated with slerp along the short way (so +170° to -170° passes through 180°).
+- **Telemetry** for the instruments comes from `telemetryAt(track, t)`: every value is optional and
+  empty when no data lies near *t*. Flags such as "armed" are step values (never interpolated).
+  Signals are named scalar series on the track (`ground_speed`, `vertical_speed`,
+  `battery_remaining`, `battery_voltage`, `armed`); GPS samples carry ellipsoid heights.
 - **Heading** (instruments, compass) is degrees clockwise from North in [0, 360). It is derived
   from the ENU attitude (`heading = pi/2 - yaw_ENU`) in one place, `model/frames.cpp`.
 - Depends only on the standard library (and later QtCore), so it is unit-tested without UI or ROS.

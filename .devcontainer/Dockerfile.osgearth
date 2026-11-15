@@ -29,7 +29,7 @@ ARG OSG_TAG=OpenSceneGraph-3.6.5
 RUN git clone --depth 1 --branch ${OSG_TAG} https://github.com/openscenegraph/OpenSceneGraph.git /tmp/osg \
  && cmake -S /tmp/osg -B /tmp/osg/build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/osg \
-      -DOPENGL_PROFILE=GL3 -DBUILD_OSG_APPLICATIONS=OFF -DBUILD_OSG_EXAMPLES=OFF \
+      -DOPENGL_PROFILE=GL3 -DBUILD_OSG_APPLICATIONS=OFF -DBUILD_OSG_EXAMPLES=OFF -DBUILD_OSG_PLUGIN_FFMPEG=OFF \
       -DCMAKE_CXX_FLAGS="-include cstdint" \
  && cmake --build /tmp/osg/build \
  && cmake --install /tmp/osg/build \

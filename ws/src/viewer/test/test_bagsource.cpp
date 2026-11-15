@@ -3,10 +3,12 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <string>
 
 #include "bag/bagsource.h"
 #include "model/frames.h"
+#include "model/telemetry.h"
 #include "testing/shapes.h"
 
 using namespace viewer;
@@ -49,6 +51,33 @@ TEST_P(BagSourceTest, CircleFlightMatchesGroundTruth) {
     }
 }
 
+TEST_P(BagSourceTest, TelemetrySignalsAreRead) {
+    const auto dir =
+        makeBag("telemetry", GetParam(), "--shape circle --duration 40 --gps 48.2655 11.6710 480");
+    const FlightData f = loadFlight(dir.string());
+    const DroneTrack& d = f.drones.at("");
+
+    const Telemetry v = telemetryAt(d, 20.0);
+    EXPECT_NEAR(*v.groundSpeed, 3.0 * 0.4, 0.01);  // circle: R * omega = 1.2 m/s
+    EXPECT_NEAR(*v.verticalSpeed, 0.0, 0.01);
+    EXPECT_NEAR(*v.altitude, 2.0, 0.05);
+    EXPECT_NEAR(*v.batteryFraction, 1.0 - 0.2 * 20.0 / 40.0, 0.01);
+    EXPECT_NEAR(*v.batteryVoltage, 16.8 - 1.2 * 20.0 / 40.0, 0.05);
+    EXPECT_TRUE(*v.armed);
+    EXPECT_NEAR(*v.flightTime, 19.0, 0.6);  // armed at 1 s, 2 Hz status
+    EXPECT_FALSE(*telemetryAt(d, 0.2).armed);
+
+    // climbing at 1 m/s at t = 4 s (climb 2 s .. 4 s)
+    EXPECT_NEAR(*telemetryAt(d, 3.0).verticalSpeed, 1.0, 0.01);
+
+    // GPS: 10 Hz for 40 s, ellipsoid height = AMSL + 47 m, origin from the local position
+    EXPECT_NEAR(double(d.gps().size()), 401.0, 2.0);
+    EXPECT_NEAR(d.gps().back().position.heightM, 480.0 + 47.0, 1.0);  // landed
+    ASSERT_TRUE(d.origin());
+    EXPECT_NEAR(d.origin()->latDeg, 48.2655, 1e-9);
+    EXPECT_NEAR(d.origin()->lonDeg, 11.6710, 1e-9);
+}
+
 TEST_P(BagSourceTest, FlightModesAreRead) {
     const auto dir = makeBag("modes", GetParam(), "--duration 40");
     const FlightData f = loadFlight(dir.string());  // keep it alive: d refers into it
@@ -64,6 +93,34 @@ TEST_P(BagSourceTest, DronesAreDetectedByNamespace) {
     const FlightData f = loadFlight(dir.string());
     ASSERT_EQ(f.drones.size(), 1u);
     EXPECT_TRUE(f.drones.count("/drone1"));
+}
+
+TEST_P(BagSourceTest, CompressedBagGivesTheSameFlight) {
+    const auto plain = loadFlight(makeBag("plain", GetParam(), "--duration 20").string());
+    const auto zst = loadFlight(makeBag("zstd", GetParam(), "--duration 20 --compress").string());
+    // metadata.yaml must say it is compressed, otherwise this test proves nothing
+    std::ifstream meta(fs::temp_directory_path() / ("viewer_zstd_" + GetParam()) / "metadata.yaml");
+    const std::string text((std::istreambuf_iterator<char>(meta)),
+                           std::istreambuf_iterator<char>());
+    EXPECT_NE(text.find("zstd"), std::string::npos);
+
+    const DroneTrack& a = plain.drones.at("");
+    const DroneTrack& b = zst.drones.at("");
+    ASSERT_EQ(a.samples().size(), b.samples().size());
+    EXPECT_NEAR(a.poseAt(12.0)->position.x, b.poseAt(12.0)->position.x, 1e-9);
+}
+
+TEST_P(BagSourceTest, SplitBagIsReadAcrossAllFiles) {
+    const auto dir = makeBag("split", GetParam(), "--duration 150 --split-bytes 300000");
+    int files = 0;
+    for (const auto& e : fs::directory_iterator(dir))
+        if (e.path().extension() == ".db3" || e.path().extension() == ".mcap") ++files;
+    EXPECT_GT(files, 1) << "the bag was not split, the test proves nothing";
+
+    const auto whole = loadFlight(makeBag("whole", GetParam(), "--duration 150").string());
+    const auto split = loadFlight(dir.string());
+    EXPECT_EQ(whole.drones.at("").samples().size(), split.drones.at("").samples().size());
+    EXPECT_NEAR(split.durationSeconds, 150.0, 0.1);
 }
 
 INSTANTIATE_TEST_SUITE_P(Storage, BagSourceTest, ::testing::Values("sqlite3", "mcap"));

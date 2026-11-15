@@ -36,6 +36,31 @@ std::optional<Pose> DroneTrack::poseAt(double t, double maxGap) const {
     return Pose{nearest.position, nearest.attitude};
 }
 
+std::optional<double> ScalarSeries::valueAt(double t, double maxGap, bool step) const {
+    if (samples_.empty()) return std::nullopt;
+    const auto next = std::upper_bound(samples_.begin(), samples_.end(), t,
+                                       [](double v, const S& s) { return v < s.t; });
+    if (next == samples_.begin()) {
+        return samples_.front().t - t > maxGap ? std::nullopt : std::optional(samples_.front().v);
+    }
+    const S& a = *(next - 1);
+    if (next == samples_.end()) return t - a.t > maxGap ? std::nullopt : std::optional(a.v);
+    const S& b = *next;
+    if (step) return t - a.t > maxGap ? std::nullopt : std::optional(a.v);
+    if (b.t - a.t <= maxGap) {
+        const double u = (b.t > a.t) ? (t - a.t) / (b.t - a.t) : 0.0;
+        return a.v + (b.v - a.v) * u;
+    }
+    const S& nearest = (t - a.t <= b.t - t) ? a : b;
+    return std::abs(t - nearest.t) > maxGap ? std::nullopt : std::optional(nearest.v);
+}
+
+std::optional<double> ScalarSeries::firstTimeAbove(double threshold) const {
+    for (const auto& s : samples_)
+        if (s.v > threshold) return s.t;
+    return std::nullopt;
+}
+
 std::optional<std::string> DroneTrack::modeAt(double t) const {
     const auto next = std::upper_bound(modes_.begin(), modes_.end(), t,
                                        [](double v, const ModeChange& m) { return v < m.t; });

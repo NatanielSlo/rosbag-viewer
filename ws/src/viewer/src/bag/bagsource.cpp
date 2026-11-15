@@ -4,11 +4,15 @@
 #include <filesystem>
 #include <memory>
 
+#include <px4_msgs/msg/battery_status.hpp>
 #include <px4_msgs/msg/vehicle_attitude.hpp>
+#include <px4_msgs/msg/vehicle_global_position.hpp>
 #include <px4_msgs/msg/vehicle_local_position.hpp>
 #include <px4_msgs/msg/vehicle_status.hpp>
 #include <rclcpp/serialization.hpp>
+#include <rosbag2_compression/sequential_compression_reader.hpp>
 #include <rosbag2_cpp/reader.hpp>
+#include <rosbag2_storage/metadata_io.hpp>
 #include <rosbag2_storage/storage_options.hpp>
 
 #include "model/frames.h"
@@ -50,6 +54,9 @@ struct RawDrone {
     std::vector<std::pair<double, Vec3>> positions;  // ENU
     DroneTrack attitudes;                            // attitude only (position unused)
     std::vector<ModeChange> modes;
+    std::map<std::string, ScalarSeries> signals;
+    std::vector<GpsSample> gps;
+    std::optional<Geodetic> origin;
 };
 
 }  // namespace
@@ -90,7 +97,17 @@ FlightData loadFlight(const std::string& path) {
 
     rosbag2_storage::StorageOptions so;
     so.uri = path;  // storage_id left empty: detected from metadata.yaml
-    rosbag2_cpp::Reader reader;
+    // Compressed bags (metadata.yaml names a compression format) need the compression reader.
+    bool compressed = false;
+    try {
+        compressed = !rosbag2_storage::MetadataIo().read_metadata(path).compression_format.empty();
+    } catch (const std::exception&) {
+        // No readable metadata.yaml: the plain reader below gives the real error message.
+    }
+    rosbag2_cpp::Reader reader =
+        compressed ? rosbag2_cpp::Reader(
+                         std::make_unique<rosbag2_compression::SequentialCompressionReader>())
+                   : rosbag2_cpp::Reader();
     try {
         reader.open(so, rosbag2_cpp::ConverterOptions{});
     } catch (const std::exception& e) {
@@ -119,6 +136,10 @@ FlightData loadFlight(const std::string& path) {
                 const auto lp = deserialize<msg::VehicleLocalPosition>(*m);
                 if (!lp.xy_valid || !lp.z_valid) continue;  // estimator not valid yet (L5)
                 d.positions.push_back({t, nedToEnu({lp.x, lp.y, lp.z})});
+                if (lp.v_xy_valid) d.signals["ground_speed"].add(t, std::hypot(lp.vx, lp.vy));
+                if (lp.v_z_valid) d.signals["vertical_speed"].add(t, -lp.vz);  // NED down -> up
+                if (!d.origin && lp.xy_global && lp.z_global)
+                    d.origin = Geodetic{lp.ref_lat, lp.ref_lon, lp.ref_alt};
             } else if (isTopic(topic, "vehicle_attitude")) {
                 const auto va = deserialize<msg::VehicleAttitude>(*m);
                 d.attitudes.addSample(
@@ -127,6 +148,18 @@ FlightData loadFlight(const std::string& path) {
                 const auto vs = deserialize<msg::VehicleStatus>(*m);
                 const std::string mode = px4ModeName(vs.nav_state);
                 if (d.modes.empty() || d.modes.back().mode != mode) d.modes.push_back({t, mode});
+                d.signals["armed"].add(t,
+                                       vs.arming_state == msg::VehicleStatus::ARMING_STATE_ARMED);
+            } else if (isTopic(topic, "vehicle_global_position")) {
+                const auto gp = deserialize<msg::VehicleGlobalPosition>(*m);
+                if (gp.lat_lon_valid && gp.alt_valid)
+                    d.gps.push_back({t, {gp.lat, gp.lon, gp.alt_ellipsoid}});
+            } else if (isTopic(topic, "battery_status")) {
+                const auto bs = deserialize<msg::BatteryStatus>(*m);
+                // PX4 marks "unknown" with -1 (remaining) and 0 (voltage)
+                if (bs.remaining >= 0.f && bs.remaining <= 1.f)
+                    d.signals["battery_remaining"].add(t, bs.remaining);
+                if (bs.voltage_v > 0.f) d.signals["battery_voltage"].add(t, bs.voltage_v);
             }
         }
     } catch (const std::exception& e) {
@@ -141,7 +174,10 @@ FlightData loadFlight(const std::string& path) {
             track.addSample({t, p, att ? att->attitude : Quat{}});
         }
         for (auto& c : d.modes) track.addModeChange(c.t, std::move(c.mode));
-        if (!track.empty() || !track.modeChanges().empty())
+        for (auto& [name, series] : d.signals) track.signal(name) = std::move(series);
+        for (const auto& g : d.gps) track.addGps(g);
+        if (d.origin) track.setOrigin(*d.origin);
+        if (!track.empty() || !track.modeChanges().empty() || !track.signals().empty())
             out.drones.emplace(ns, std::move(track));
     }
     return out;
