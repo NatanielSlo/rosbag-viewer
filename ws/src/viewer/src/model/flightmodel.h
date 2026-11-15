@@ -81,7 +81,7 @@ public:
         const auto it = signals_.find(name);
         return it == signals_.end() ? nullptr : &it->second;
     }
-    const std::map<std::string, ScalarSeries>& signals() const { return signals_; }
+    const std::map<std::string, ScalarSeries>& allSignals() const { return signals_; }
 
     void addGps(const GpsSample& g) { gps_.push_back(g); }
     const std::vector<GpsSample>& gps() const { return gps_; }

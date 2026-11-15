@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One entry point for building and running the viewer in the dev container.
 #   scripts/dev build    build the workspace
-#   scripts/dev run      build, then start the viewer (needs a display)
+#   scripts/dev run [bag]      build, then start the viewer (needs a display)
 #   scripts/dev test     build, then run all tests
 #   scripts/dev smoke    start the viewer headless, load the UI, exit 0 if it works
 #   scripts/dev format   run clang-format on all sources
@@ -54,7 +54,7 @@ BIN='ws/install/viewer/lib/viewer/viewer'
 case "${1:-}" in
   image)  image ;;
   build)  in_container "$BUILD" ;;
-  run)    in_container "$BUILD && cd /workspace && $BIN" ;;
+  run)    in_container "$BUILD && cd /workspace && ws/src/viewer/fetch_cesium.sh && $BIN ${2:+\"$2\"}" ;;
   test)   in_container "$BUILD && colcon test --event-handlers console_direct+ && colcon test-result --verbose" ;;
   smoke)  in_container "$BUILD && cd /workspace && QT_QPA_PLATFORM=offscreen $BIN --smoke-test" ;;
   proto)  in_container "$BUILD && cd /workspace && ws/src/prototypes/${2:?name}/fetch_cesium.sh && ws/install/${2}/lib/${2}/${2}" ;;

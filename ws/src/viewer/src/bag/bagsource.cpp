@@ -307,7 +307,7 @@ FlightData loadFlight(const std::string& path) {
             if (Source* s = pick(d, [](const Source& s) { return s.origin.has_value(); }))
                 track.setOrigin(*s->origin);
         }
-        if (!track.empty() || !track.modeChanges().empty() || !track.signals().empty()) {
+        if (!track.empty() || !track.modeChanges().empty() || !track.allSignals().empty()) {
             out.drones.emplace(ns, std::move(track));
             out.sources.emplace(ns, names);
         }

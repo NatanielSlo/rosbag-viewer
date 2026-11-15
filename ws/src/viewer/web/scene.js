@@ -1,0 +1,186 @@
+// 3D map scene of the viewer. The native side (Qt) owns time and data and calls into this
+// page: init(token), setPath(segments), setDrone([lon,lat,h,heading]|null), camera(mode), ...
+// The page talks back with console messages: "READY", "FPS n", "STATUS text", "SEEK seconds".
+let viewer, tileset, droneEntity;
+let current = null;                 // [lon, lat, ellipsoid height, heading rad]
+let pathEntities = [];
+let pathPoints = [];                // [{t, mode, h, cart}] for click and hover
+let followMode = false;
+const follow = { heading: null, pitch: Cesium.Math.toRadians(-30), range: 60 };
+
+function notice(text) {
+  const n = document.getElementById("notice");
+  n.textContent = text; n.style.display = text ? "block" : "none";
+}
+
+async function init(token) {
+  const hasToken = !!token;
+  if (hasToken) Cesium.Ion.defaultAccessToken = token;
+  viewer = new Cesium.Viewer("c", {
+    baseLayer: false, baseLayerPicker: false, geocoder: false, homeButton: false,
+    sceneModePicker: false, navigationHelpButton: false, animation: false, timeline: false,
+    fullscreenButton: false, infoBox: false, selectionIndicator: false,
+    globe: hasToken ? false : undefined,
+    requestRenderMode: false,
+  });
+  viewer.scene.skyAtmosphere.show = true;
+
+  if (hasToken) {
+    try {
+      tileset = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);   // Google Photorealistic 3D Tiles
+      viewer.scene.primitives.add(tileset);
+      console.log("STATUS Google 3D Tiles: loading");
+      tileset.allTilesLoaded.addEventListener(() => console.log("STATUS Google 3D Tiles: loaded"));
+    } catch (e) {
+      notice("3D Tiles failed: " + e.message + " (token wrong or no internet)");
+      viewer.scene.globe = new Cesium.Globe(viewer.scene.ellipsoid);
+      console.log("STATUS tiles failed");
+    }
+  } else {
+    notice("No Cesium ion token set (CESIUM_ION_TOKEN): showing the bare globe");
+    console.log("STATUS no token, bare globe");
+  }
+
+  droneEntity = viewer.entities.add({
+    show: false,
+    position: new Cesium.CallbackProperty(() => cart(current), false),
+    orientation: new Cesium.CallbackProperty(() => Cesium.Transforms.headingPitchRollQuaternion(
+      cart(current), new Cesium.HeadingPitchRoll(current ? current[3] - Math.PI / 2 : 0, 0, 0)), false),
+    box: { dimensions: new Cesium.Cartesian3(3, 1, 0.6), material: Cesium.Color.ORANGE },
+  });
+
+  const tip = document.getElementById("tip");
+  const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+  handler.setInputAction(m => { const p = nearestPathPoint(m.position); if (p) console.log("SEEK " + p.t); },
+                         Cesium.ScreenSpaceEventType.LEFT_CLICK);
+  handler.setInputAction(m => {
+    const p = nearestPathPoint(m.endPosition);
+    if (!p) { tip.style.display = "none"; return; }
+    tip.textContent = "t " + p.t.toFixed(1) + " s\n" + p.mode + "\n" + p.h.toFixed(0) + " m (ellipsoid)";
+    tip.style.left = (m.endPosition.x + 14) + "px"; tip.style.top = (m.endPosition.y + 14) + "px";
+    tip.style.display = "block";
+  }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromDegrees(11.6710, 48.2615, 700),
+    orientation: { heading: 0, pitch: Cesium.Math.toRadians(-35), roll: 0 },
+  });
+
+  let frames = 0, last = performance.now();
+  viewer.scene.postRender.addEventListener(() => {
+    frames++;
+    const now = performance.now();
+    if (now - last >= 1000) { console.log("FPS " + (frames * 1000 / (now - last)).toFixed(1)); frames = 0; last = now; }
+  });
+  console.log("READY");
+}
+
+function cart(p) {
+  return p ? Cesium.Cartesian3.fromDegrees(p[0], p[1], p[2]) : Cesium.Cartesian3.ZERO;
+}
+
+// segments: [{mode, color, pos:[lon,lat,h,...], t:[...]}] — one piece of path per flight mode.
+function setPath(segments) {
+  pathEntities.forEach(e => viewer.entities.remove(e));
+  pathEntities = []; pathPoints = [];
+  const all = [];
+  for (const s of segments) {
+    const positions = Cesium.Cartesian3.fromDegreesArrayHeights(s.pos);
+    pathEntities.push(viewer.entities.add({
+      polyline: { positions, width: 4, material: Cesium.Color.fromCssColorString(s.color) },
+    }));
+    positions.forEach((c, i) => pathPoints.push({ t: s.t[i], mode: s.mode, h: s.pos[i * 3 + 2], cart: c }));
+    all.push(...positions);
+  }
+  if (all.length) {
+    pathEntities.push(viewer.entities.add({     // start / home marker
+      position: all[0],
+      point: { pixelSize: 10, color: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2 },
+      label: { text: "H", font: "bold 14px sans-serif", pixelOffset: new Cesium.Cartesian2(0, -18),
+               fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 3,
+               style: Cesium.LabelStyle.FILL_AND_OUTLINE },
+    }));
+    zoomToFlight();
+  }
+}
+
+function nearestPathPoint(pos) {
+  let best = null, bestD = 14;   // pixels
+  for (const p of pathPoints) {
+    const w = Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene, p.cart);
+    if (!w) continue;
+    const d = Math.hypot(w.x - pos.x, w.y - pos.y);
+    if (d < bestD) { bestD = d; best = p; }
+  }
+  return best;
+}
+
+function setDrone(p) {
+  current = p;
+  droneEntity.show = !!p;
+  if (p && followMode) {
+    viewer.camera.lookAt(cart(p), new Cesium.HeadingPitchRange(follow.heading ?? p[3], follow.pitch, follow.range));
+  }
+}
+
+function freeCamera() {
+  followMode = false;
+  viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+}
+
+function zoomToFlight() {
+  freeCamera();
+  if (!pathPoints.length) return;
+  const sphere = Cesium.BoundingSphere.fromPoints(pathPoints.map(p => p.cart));
+  viewer.camera.flyToBoundingSphere(sphere, {
+    duration: 1.2,
+    offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-35), Math.max(sphere.radius * 3, 150)),
+  });
+}
+
+// mode: "follow" | "top" | "reset" | "zoom"
+function camera(mode) {
+  if (!viewer) return;
+  if (mode === "zoom" || mode === "reset") return zoomToFlight();
+  if (!current) return;
+  freeCamera();
+  const target = cart(current);
+  if (mode === "top") {
+    viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(target, 1), {
+      duration: 1.0, offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 250) });
+  } else if (mode === "follow") {
+    follow.heading = null;
+    viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(target, 1), {
+      duration: 1.0,
+      offset: new Cesium.HeadingPitchRange(current[3], follow.pitch, follow.range),
+      complete: () => { followMode = true; },
+    });
+  }
+}
+
+// View keys. In follow mode they change the chosen chase angle, otherwise they move the camera.
+function view(action) {
+  if (!viewer) return;
+  const c = viewer.camera;
+  const step = Math.max(c.positionCartographic.height * 0.05, 2);
+  if (followMode) {
+    const h = follow.heading ?? (current ? current[3] : 0);
+    if (action === "rotLeft") follow.heading = h - 0.1;
+    if (action === "rotRight") follow.heading = h + 0.1;
+    if (action === "up") follow.pitch = Math.min(follow.pitch + 0.08, -0.1);
+    if (action === "down") follow.pitch = Math.max(follow.pitch - 0.08, -1.5);
+    if (action === "in") follow.range = Math.max(follow.range * 0.85, 5);
+    if (action === "out") follow.range = Math.min(follow.range / 0.85, 2000);
+    return;
+  }
+  switch (action) {
+    case "left": c.moveLeft(step); break;
+    case "right": c.moveRight(step); break;
+    case "up": c.moveForward(step); break;
+    case "down": c.moveBackward(step); break;
+    case "rotLeft": c.lookLeft(0.1); break;
+    case "rotRight": c.lookRight(0.1); break;
+    case "in": c.zoomIn(step * 2); break;
+    case "out": c.zoomOut(step * 2); break;
+  }
+}

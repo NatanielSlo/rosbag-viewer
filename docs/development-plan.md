@@ -21,8 +21,8 @@ Durations are rough estimates for one developer, for planning only. Re-estimate 
 - **Done when:** a fresh checkout builds and runs with one command, following the README.
 
 ### 1. 3D engine prototype, time-boxed (1–2 weeks)
-**Status (2026-11-15): in progress.** Prototype B is measured. Prototype A builds and is being
-debugged (findings in [decisions.md, ADR-002](decisions.md#adr-002-3d-engine) and
+**Status (2026-11-15): done, option B (CesiumJS in Qt WebEngine) chosen.** Prototype A was paused
+(its findings (findings in [decisions.md, ADR-002](decisions.md#adr-002-3d-engine) and
 [prototype-lessons.md](prototype-lessons.md)). Code: `ws/src/prototypes/`.
 - The same demo with osgEarth + Cesium Native and with CesiumJS in Qt WebEngine (ADR-002).
 - **Done when:** the engine is chosen and recorded in ADR-002.
@@ -65,6 +65,17 @@ state), rates, damaged bags (partial read is in, but untested), performance meas
 - **Done when:** every IMAV-26 bag and the PX4 SITL bag load, or fail with a clear message.
 
 ### 3. Indoor 3D scene, playback and controls (3–4 weeks)
+**Status (2026-11-15): first slice running on the map engine (B), GPS bags only.** The `viewer`
+app opens a bag (`scripts/dev run demo/gps_circle`, or Ctrl+O), shows the toolbar with status
+chips and drone selector, the CesiumJS map filling the window, a floating telemetry panel,
+view controls and a docked timeline with flight-mode bands, click/drag seek and hover time.
+Done: transport (Space, J/K/L, Shift+,/., Home/End, +/-), view keys (arrows/WASD, Q/E, PgUp/PgDn,
+F/T/R/Z with animated flights, follow mode), click the path to seek, path tooltip, the `?`
+overlay, Tab for drones. Code: `src/app/replaycontroller.*`, `web/scene.js`, `qml/Main.qml`.
+Not done: the local 3D scene for bags without GPS (the window says so), `,`/`.` camera frames
+and C (no camera yet), M (needs the local scene), the Analysis panel (Ctrl+J), event markers
+and timeline zoom, attitude in the drone model, setpoint/LIO path, speed in the path tooltip.
+Not yet seen on screen: the map in the new app (headless runs cannot render WebEngine).
 - Layout: toolbar with status chips and drone selector, full-window view, floating panels,
   docked timeline, Analysis panel frame.
 - Scene: grid, N/E/S/W markers, path coloured by mode, drone(s) with attitude, heading line,

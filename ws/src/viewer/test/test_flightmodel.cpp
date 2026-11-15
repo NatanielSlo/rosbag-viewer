@@ -102,8 +102,8 @@ TEST(GeoPoint, InterpolatesAndHonoursDropouts) {
     ASSERT_TRUE(mid);
     EXPECT_NEAR(mid->latDeg, 48.1, 1e-9);
     EXPECT_NEAR(mid->heightM, 505, 1e-9);
-    ASSERT_TRUE(d.geoPointAt(2.0));        // held from the sample at t=1
+    ASSERT_TRUE(d.geoPointAt(2.0));  // held from the sample at t=1
     EXPECT_NEAR(d.geoPointAt(2.0)->latDeg, 48.2, 1e-9);
-    EXPECT_FALSE(d.geoPointAt(5.0));       // inside the 9 s dropout, too far from both
-    EXPECT_FALSE(d.geoPointAt(20.0));      // after the end
+    EXPECT_FALSE(d.geoPointAt(5.0));   // inside the 9 s dropout, too far from both
+    EXPECT_FALSE(d.geoPointAt(20.0));  // after the end
 }

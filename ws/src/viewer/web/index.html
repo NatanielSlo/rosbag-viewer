@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Map</title>
+<link rel="stylesheet" href="app://cesium/Widgets/widgets.css">
+<style>
+  html, body, #c { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #14181d; }
+  #notice { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 10;
+            background: #cc14181d; color: #ffd37a; font: 13px sans-serif; padding: 6px 12px;
+            border-radius: 6px; display: none; }
+  #tip { position: absolute; z-index: 10; pointer-events: none; display: none;
+         background: #e614181d; color: #d8dee6; font: 12px ui-monospace, monospace;
+         padding: 4px 8px; border-radius: 4px; white-space: pre; }
+</style>
+<script>window.CESIUM_BASE_URL = "app://cesium/";</script>
+<script src="app://cesium/Cesium.js"></script>
+</head>
+<body>
+<div id="c"></div>
+<div id="notice"></div>
+<div id="tip"></div>
+<script src="app://demo/scene.js"></script>
+</body>
+</html>

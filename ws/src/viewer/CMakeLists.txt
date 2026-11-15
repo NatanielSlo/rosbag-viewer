@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 
 find_package(ament_cmake REQUIRED)
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick WebEngineQuick WebEngineCore)
 qt_standard_project_setup(REQUIRES 6.5)
 
 # Everything that does not need a window lives in viewer_core (QtCore only),
@@ -16,13 +16,6 @@ qt_standard_project_setup(REQUIRES 6.5)
 add_library(viewer_core STATIC src/appinfo.cpp src/model/frames.cpp src/model/flightmodel.cpp src/model/telemetry.cpp)
 target_include_directories(viewer_core PUBLIC src)
 target_link_libraries(viewer_core PUBLIC Qt6::Core)
-
-qt_add_executable(viewer src/main.cpp)
-qt_add_qml_module(viewer
-    URI Viewer
-    VERSION 1.0
-    QML_FILES qml/Main.qml)
-target_link_libraries(viewer PRIVATE viewer_core Qt6::Gui Qt6::Quick)
 
 # Synthetic test bags need ROS (rosbag2_cpp) and px4_msgs; skipped where they are missing.
 find_package(rosbag2_cpp QUIET)
@@ -53,7 +46,19 @@ else()
   message(WARNING "rosbag2_cpp/px4_msgs not found: skipping make_test_bag and its test")
 endif()
 
-install(TARGETS viewer RUNTIME DESTINATION lib/${PROJECT_NAME})
+# The application. It needs the bag reader (ROS), so it is built only where that is available.
+if(HAVE_ROS_BAGS)
+  qt_add_executable(viewer src/main.cpp src/app/replaycontroller.cpp)
+  qt_add_qml_module(viewer
+      URI Viewer
+      VERSION 1.0
+      QML_FILES qml/Main.qml)
+  # The web files are served from the source tree for now; packaging comes with step 7.
+  target_compile_definitions(viewer PRIVATE WEB_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(viewer PRIVATE viewer_bag Qt6::Gui Qt6::Quick Qt6::WebEngineQuick
+                                       Qt6::WebEngineCore)
+  install(TARGETS viewer RUNTIME DESTINATION lib/${PROJECT_NAME})
+endif()
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
