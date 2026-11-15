@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Viewer</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js",
+               "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <h1>Flight Viewer</h1>
+    <p class="hint">Pick a recording</p>
+    <ul id="bag-list"></ul>
+  </aside>
+
+  <main id="stage">
+    <canvas id="scene"></canvas>
+    <div id="map" hidden></div>
+    <div id="map-bar" hidden>
+      <div class="seg">
+        <button data-mode="scene" class="on">3D scene</button>
+        <button data-mode="map">Map</button>
+      </div>
+      <label class="chk" id="photo-wrap" hidden><input type="checkbox" id="photo-toggle"> Photorealistic (Google)</label>
+      <label class="chk" id="align-wrap" hidden><input type="checkbox" id="align-toggle" checked> Put takeoff on the ground</label>
+    </div>
+    <div id="banner" hidden></div>
+    <div id="empty">Select a recording on the left to start.</div>
+
+    <section id="hud" hidden>
+      <div class="hud-title" id="hud-mode">-</div>
+      <div class="hud-sub" id="hud-status"></div>
+      <dl>
+        <div><dt>Altitude</dt><dd id="hud-alt">-</dd></div>
+        <div><dt>Speed</dt><dd id="hud-speed">-</dd></div>
+        <div><dt>From start</dt><dd id="hud-dist">-</dd></div>
+        <div><dt>Battery</dt><dd id="hud-bat">-</dd></div>
+        <div><dt>Mission step</dt><dd id="hud-course">-</dd></div>
+      </dl>
+      <div id="hud-det" class="hud-det" hidden></div>
+    </section>
+
+    <section id="cams" hidden></section>
+
+    <div id="view-buttons" hidden>
+      <button data-view="free" class="on">Free</button>
+      <button data-view="follow">Follow</button>
+      <button data-view="top">Top</button>
+      <label class="chk" id="lio-wrap" hidden><input type="checkbox" id="lio-toggle"> Show LIO path</label>
+    </div>
+  </main>
+
+  <footer id="controls" hidden>
+    <button id="play" aria-label="Play or pause">Play</button>
+    <select id="speed" aria-label="Playback speed">
+      <option value="0.5">0.5x</option><option value="1" selected>1x</option>
+      <option value="2">2x</option><option value="4">4x</option><option value="8">8x</option>
+    </select>
+    <div id="timeline">
+      <div id="mode-bar"></div>
+      <input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Time">
+    </div>
+    <span id="clock">0:00 / 0:00</span>
+    <div id="legend"></div>
+  </footer>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>
