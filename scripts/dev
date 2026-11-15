@@ -12,6 +12,13 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 IMAGE=${VIEWER_IMAGE:-rosbag-viewer-dev}
 
+# The Cesium ion token comes from the environment or from the git-ignored .env.local.
+# Only this one variable is passed on; the other keys in that file stay on the host.
+if [[ -z "${CESIUM_ION_TOKEN:-}" && -f .env.local ]]; then
+  CESIUM_ION_TOKEN=$(sed -n 's/^CESIUM_ION_TOKEN=//p' .env.local | head -1 | tr -d "\"'")
+  export CESIUM_ION_TOKEN
+fi
+
 image() {
   docker image inspect base-image:jazzy >/dev/null 2>&1 || {
     echo "base-image:jazzy not found. Build the team image first (see .devcontainer/Dockerfile)." >&2
