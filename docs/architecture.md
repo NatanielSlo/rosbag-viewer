@@ -79,8 +79,9 @@ The same stack as the rest of the GCS, so the viewer can be embedded in it.
 
 ### 3.1 BagSource
 - Opens a bag with `rosbag2_cpp`. Never writes to the bag's medium (bags live on USB sticks).
-- On first open it builds a **summary index**: downsampled pose, attitude, velocity, battery,
-  GPS, flight-mode changes, events and camera-frame timestamps. The index is cached on the local
+- On first open it builds a **summary index**: downsampled pose, attitude, angular rates,
+  velocity, battery, GPS, flight-mode changes, arming, status messages, events and
+  camera-frame timestamps. The index is cached on the local
   disk, keyed by file size, modification time and index format version. Re-opening is instant (L1, L2).
 - Shows progress during the first read: large bags on USB take minutes.
 - **Camera frames** are read on demand, with at most one request per camera in flight
@@ -102,19 +103,87 @@ a preference list per signal, because names differ between bags (L4).
 - Depends only on QtCore, so it can be unit-tested without UI or ROS.
 
 ### 3.4 Views
-- **Indoor 3D scene**: grid, compass, path coloured by mode, drone model, setpoint, LIO path (hidden by default, L6).
-- **3D map** for GPS flights: terrain + Google Photorealistic 3D Tiles (L9), path, drone, start point.
-- **Overlays**: status bar (mode, altitude, speed, battery), camera picture-in-picture,
-  detections, warnings (no position, drone never moved, LIO lost tracking).
-- **Timeline**: mode bands, event markers, scrubbing, speed.
-- **Navigation**: mouse orbit/pan/zoom; free / follow / top-down views; zoom to flight;
-  keyboard: arrows/WASD pan, Q/E rotate, Space play, `,` `.` frame step, J/K/L, Shift = 10 s,
-  `?` shows all shortcuts.
 
-UI rules:
+**Layout** (QGroundControl-style, professional rather than playful):
+- A slim **toolbar**: button for the recording list, recording name and date, status chips
+  (armed/disarmed, flight mode, GPS, battery), warnings counter.
+- The **main view** (3D map or local 3D scene) fills the window. Everything else floats on top:
+  the instrument panel top-right, camera picture-in-picture top-left, view controls bottom-right.
+- The **timeline** is docked at the bottom.
+
+**Scenes**
+- **Indoor 3D scene**: grid, N/E/S/W markers on the ground, path coloured by flight mode, drone
+  model with attitude, heading line, setpoint, start/home marker, LIO path (hidden by default, L6).
+- **3D map** for GPS flights: terrain + Google Photorealistic 3D Tiles (L9), path coloured by
+  mode, drone with attitude, home marker. GPS flights open on the map by default.
+
+**Instruments and telemetry** (all at the current playback time)
+- **Attitude indicator** (artificial horizon) showing roll and pitch.
+- **Compass rose / heading** in degrees, with the direction to home.
+- **Values with units, fixed-width numbers:**
+  - altitude (above start, plus AMSL for GPS flights);
+  - horizontal speed and vertical speed;
+  - distance from home;
+  - heading;
+  - roll, pitch and yaw rates (body rotation; when recorded, e.g. `/mavros/imu/data`);
+  - battery voltage and %;
+  - flight time;
+  - mission/course step.
+- **Status line:** flight mode in words plus the raw mode name, arming state, latest status
+  message (e.g. "Arming denied: …").
+- **Detections** at the current time; **warnings**: no position, drone never moved, LIO lost
+  tracking, GPS lost.
+- A value with no data near the current time is shown as "—" (not a stale number).
+
+**Camera**: picture-in-picture synced to time; click to swap it with the main view; switch
+between cameras.
+
+**Timeline**
+- Flight-mode colour bands, event markers (mode changes, arm/disarm, status messages, warnings).
+- Hover shows the time, mode and event. Click or drag to seek; click a marker to jump to it.
+- Scroll over the timeline to zoom into a section of the flight.
+- Time shown as `m:ss.s` (current / total), playback speed 0.25×–16×.
+
+**Advanced controls**
+- **Mouse in the 3D view**:
+  - orbit, pan and zoom;
+  - **click a point on the path to jump to that moment**;
+  - hover the path for a tooltip with time, altitude, speed and mode.
+- **Camera modes:**
+  - free;
+  - follow (keeps your chosen angle behind the drone);
+  - top-down (north up);
+  - zoom to whole flight;
+  - reset view.
+
+  All transitions are animated, never jumps.
+- **Keyboard** (also shown in a `?` overlay and in the menus):
+
+  | Key | Action |
+  |---|---|
+  | Space | play / pause |
+  | `,` / `.` | previous / next camera frame |
+  | J / K / L | rewind / pause / fast-forward (press again = faster) |
+  | Shift + `,` / `.` | jump 10 s back / forward |
+  | Home / End | start / end of the flight |
+  | `+` / `-` | playback speed |
+  | Arrows / W A S D | pan the view |
+  | Q / E | rotate the view |
+  | PageUp / PageDown | zoom in / out |
+  | F / T / R / Z | follow / top-down / reset view / zoom to flight |
+  | M | 3D map ↔ local 3D scene (GPS flights) |
+  | C | swap camera and main view |
+  | Ctrl+O | open the recording list |
+  | ? | show all shortcuts |
+
+- Optional **3D-mouse / gamepad** support for the view can be added later (not planned yet).
+
+**UI rules**
 - The map attribution (bottom-left) is never covered. Google and Cesium require it.
 - The recording list is hidden behind a button and only opens when needed.
-- Numbers always show units and use a fixed-width font.
+- Numbers always show units and use a fixed-width font. Flight-mode colours are the same
+  everywhere (path, timeline, chips).
+- Every action has a keyboard shortcut and a visible control. Nothing is keyboard-only.
 
 ---
 

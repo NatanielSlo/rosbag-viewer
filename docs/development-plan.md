@@ -29,12 +29,24 @@ Durations are rough estimates for one developer, for planning only. Re-estimate 
 - Flight model and `ReplayClock`. Unit tests with synthetic bags.
 - **Done when:** every IMAV-26 bag and the PX4 SITL bag load, or fail with a clear message.
 
-### 3. Indoor 3D scene and playback (2–3 weeks)
-- Grid, compass, path coloured by mode, drone with attitude, setpoint, LIO path, start point.
-- Timeline (mode bands, events, scrubbing, speed), overlays (mode, altitude, speed, battery),
-  warnings.
-- Navigation: free / follow / top views, zoom to flight, full keyboard and mouse controls.
-- **Done when:** the IMAV-26 hall flights replay smoothly, with everything the prototype showed.
+### 3. Indoor 3D scene, playback and controls (3–4 weeks)
+- Layout: toolbar with status chips, full-window view, floating panels, docked timeline.
+- Scene: grid, N/E/S/W markers, path coloured by mode, drone with attitude, heading line,
+  setpoint, LIO path, start/home marker.
+- Timeline: mode bands, event markers, hover info, click/drag seek, jump to marker, zoom.
+- **Advanced controls** ([architecture.md §3.4](architecture.md#34-views)): click the path
+  to seek, path tooltips, free/follow/top-down/zoom-to-flight/reset with animated transitions,
+  the full keyboard map and the `?` overlay.
+- **Done when:** the IMAV-26 hall flights replay smoothly and every control in the shortcut
+  table works.
+
+### 3b. Instruments and telemetry (1–2 weeks)
+- Attitude indicator, compass rose with heading and direction to home.
+- Telemetry values: altitude, horizontal/vertical speed, distance from home, heading,
+  roll/pitch/yaw rates, battery, flight time, mission step. Status line and warnings.
+- "—" for values with no data near the current time.
+- **Done when:** the instruments match the 3D scene (e.g. a 90° yaw turn shows on the compass,
+  the horizon and the drone model alike), checked on PX4 and MAVROS bags.
 
 ### 4. 3D map for GPS flights (2–3 weeks)
 - Terrain + Google Photorealistic 3D Tiles (via Cesium ion), flight path and drone on the map,
