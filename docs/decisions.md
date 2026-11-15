@@ -17,8 +17,8 @@ Status values: **Accepted**, **Proposed** (needs review), **Open** (needs input 
 of the team's GCS is native, and comparable professional tools (QGroundControl, RViz2,
 PlotJuggler) are Qt/C++.
 
-**Decision.** Build the viewer in C++20 with Qt 6 (Qt Quick), on the same stack as the rest of
-the GCS, so it can run standalone or be embedded.
+**Decision.** Build the viewer in C++20 with Qt 6 (Qt Quick), on the same base stack as the
+rest of the team's GCS.
 
 **Consequences.** The prototype code is not reused. It is kept at tag `prototype-electron`
 and its lessons are in [prototype-lessons.md](prototype-lessons.md).
@@ -57,3 +57,49 @@ of life in **May 2027**.
 **Decision.** Target Humble / 22.04. Use only stable `rosbag2_cpp` APIs and add a CI build
 against the next ROS 2 LTS, so the viewer moves along whenever the team migrates. The
 viewer must also keep reading bags recorded with Humble after the team migrates.
+
+## ADR-005: Standalone application
+**Status:** Accepted (2026-11-15)
+
+**Decision.** The viewer is its own desktop application with its own packaging and releases.
+It is not embedded in the team's GCS.
+
+**Consequences.** No integration contract with the GCS team is needed, and the viewer keeps
+its own release cycle. Visual consistency with the GCS (flight-mode names and colours) is
+nice to have, not a requirement.
+
+## ADR-006: The viewer adapts to any bag
+**Status:** Accepted (2026-11-15)
+
+**Context.** We considered agreeing a "recording profile" (required topics, format) with the
+drone team.
+
+**Decision.** No requirements on what is recorded. The viewer shows what it finds, hides
+features without data, and explains in "Recording info" what was and was not found.
+
+**Consequences.** Adapters must be tolerant: topic preference lists, defaults, unknown types
+skipped. Some features (e.g. detection placement) degrade gracefully when data is missing.
+
+## ADR-007: Per-user Cesium ion tokens, simple offline fallback
+**Status:** Accepted (2026-11-15)
+
+**Decision.**
+- Each user enters their own Cesium ion token in Settings. It is stored in the user's config
+  or keyring, never in git or the package.
+- Without internet or without a token, GPS flights are shown in the local 3D scene instead of
+  on the 3D map.
+- No tile caching. Offline support is wanted but is not a priority.
+
+## ADR-008: Several drones per bag
+**Status:** Accepted (2026-11-15)
+
+**Decision.** Detect drones by topic namespace. Each drone gets its own series, path, model
+and telemetry, and a drone selector chooses which one the instruments follow. A bag with
+one drone behaves exactly as before.
+
+## ADR-009: English UI
+**Status:** Accepted (2026-11-15)
+
+**Decision.** The UI is English only. Texts still go through Qt's `tr()` so a translation can
+be added later without code changes.
+
