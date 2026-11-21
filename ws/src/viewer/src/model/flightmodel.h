@@ -49,7 +49,7 @@ private:
 
 struct GpsSample {
     double t = 0;
-    Geodetic position;  // height above the WGS84 ellipsoid (what the 3D map needs, L8)
+    Geodetic position;  // height above the WGS84 ellipsoid (what the 3D map needs)
 };
 
 class DroneTrack {

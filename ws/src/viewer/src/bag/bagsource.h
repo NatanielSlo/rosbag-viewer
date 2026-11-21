@@ -37,7 +37,7 @@ struct FlightData {
     std::map<std::string, DroneSources> sources;  // same keys as `drones`
 };
 
-// Time base: the bag's receive time, in seconds since the first message (docs/architecture.md 3.1).
+// Time base: the bag's receive time, in seconds since the first message.
 FlightData loadFlight(const std::string& bagPath);
 
 // PX4 nav_state -> a readable flight-mode name.

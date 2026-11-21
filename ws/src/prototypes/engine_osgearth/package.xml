@@ -2,7 +2,7 @@
 <package format="3">
   <name>engine_osgearth</name>
   <version>0.0.1</version>
-  <description>Step 1 prototype, option A: osgEarth + cesium-native in Qt Quick. Throw-away, see ADR-002.</description>
+  <description>Engine prototype, option A: osgEarth + cesium-native in Qt Quick. Throw-away.</description>
   <maintainer email="nataniel.slowikowski@gmail.com">Nataniel Slowikowski</maintainer>
   <license>TODO</license>
   <buildtool_depend>ament_cmake</buildtool_depend>

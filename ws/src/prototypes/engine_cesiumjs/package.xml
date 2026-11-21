@@ -2,7 +2,7 @@
 <package format="3">
   <name>engine_cesiumjs</name>
   <version>0.0.1</version>
-  <description>Step 1 prototype, option B: CesiumJS in Qt WebEngine. Throw-away, see ADR-002.</description>
+  <description>Engine prototype, option B: CesiumJS in Qt WebEngine. Throw-away.</description>
   <maintainer email="nataniel.slowikowski@gmail.com">Nataniel Slowikowski</maintainer>
   <license>TODO</license>
   <buildtool_depend>ament_cmake</buildtool_depend>

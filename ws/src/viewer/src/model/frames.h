@@ -24,8 +24,7 @@ double headingFromAttitude(Quat q_flu_enu);
 // Yaw in ENU (counter-clockwise from East) of the body's forward axis.
 double yawEnu(Quat q_flu_enu);
 
-// WGS84 geodetic position. Height is above the ellipsoid (not AMSL, see docs/prototype-lessons.md
-// L8).
+// WGS84 geodetic position. Height is above the ellipsoid, not AMSL.
 struct Geodetic {
     double latDeg = 0, lonDeg = 0, heightM = 0;
 };

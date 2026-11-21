@@ -1,6 +1,6 @@
 #pragma once
 // "Recording info": what the viewer found in a bag and what it did not, per drone.
-// The viewer accepts any bag (ADR-006), so this is how the user learns why a feature is missing.
+// The viewer accepts any bag, so this is how the user learns why a feature is missing.
 #include <string>
 #include <vector>
 

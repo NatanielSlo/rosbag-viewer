@@ -5,7 +5,7 @@
 #   scripts/dev test     build, then run all tests
 #   scripts/dev smoke    start the viewer headless, load the UI, exit 0 if it works
 #   scripts/dev format   run clang-format on all sources
-#   scripts/dev proto <name>  build, then run a Step 1 prototype (ws/src/prototypes/<name>)
+#   scripts/dev proto <name>  build, then run an engine prototype (ws/src/prototypes/<name>)
 #   scripts/dev shell    interactive shell in the container
 #   scripts/dev image    (re)build the container image only
 set -euo pipefail

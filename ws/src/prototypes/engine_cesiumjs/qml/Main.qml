@@ -12,7 +12,7 @@ Window {
     // Synthetic flight: a 150 m radius circle at TUM Garching, climbing 20 -> 60 m, 90 s per lap.
     readonly property real lat0: 48.2655
     readonly property real lon0: 11.6710
-    readonly property real groundEllipsoid: 527   // ~480 m AMSL + ~47 m geoid offset (L8)
+    readonly property real groundEllipsoid: 527   // ~480 m AMSL + ~47 m geoid offset
     property real t: 0
     property real fps: 0
     property string status: "loading"

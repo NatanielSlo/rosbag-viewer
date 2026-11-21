@@ -53,7 +53,7 @@ if(HAVE_ROS_BAGS)
       URI Viewer
       VERSION 1.0
       QML_FILES qml/Main.qml)
-  # The web files are served from the source tree for now; packaging comes with step 7.
+  # The web files are served from the source tree for now; packaging comes later.
   target_compile_definitions(viewer PRIVATE WEB_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(viewer PRIVATE viewer_bag Qt6::Gui Qt6::Quick Qt6::WebEngineQuick
                                        Qt6::WebEngineCore)

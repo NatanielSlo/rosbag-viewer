@@ -1,4 +1,4 @@
-# Step 1, prototype A only: osgEarth 3.8.1 + cesium-native, built from source (ADR-002).
+# Prototype A only: osgEarth 3.8.1 + cesium-native, built from source.
 # Slow (an hour or more), so it is a separate image on top of the normal dev image.
 #   docker build -t rosbag-viewer-dev-osgearth -f .devcontainer/Dockerfile.osgearth .devcontainer
 ARG BASE=rosbag-viewer-dev

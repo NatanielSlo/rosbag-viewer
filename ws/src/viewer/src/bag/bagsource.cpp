@@ -190,7 +190,7 @@ FlightData loadFlight(const std::string& path) {
                 if (isVersioned(k.rest, "vehicle_local_position")) {
                     d.topics.position = topic;
                     const auto lp = deserialize<msg::VehicleLocalPosition>(*m);
-                    if (!lp.xy_valid || !lp.z_valid) continue;  // estimator not valid yet (L5)
+                    if (!lp.xy_valid || !lp.z_valid) continue;  // estimator not valid yet
                     d.positions.push_back({t, nedToEnu({lp.x, lp.y, lp.z})});
                     if (lp.v_xy_valid) d.groundSpeed.add(t, std::hypot(lp.vx, lp.vy));
                     if (lp.v_z_valid) d.verticalSpeed.add(t, -lp.vz);  // NED down -> up

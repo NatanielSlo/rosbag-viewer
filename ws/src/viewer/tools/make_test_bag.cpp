@@ -181,7 +181,7 @@ int main(int argc, char** argv) {
                 fix.status.status = sensor_msgs::msg::NavSatStatus::STATUS_FIX;
                 fix.latitude = o.lat + north / 111'320.0;
                 fix.longitude = o.lon + east / (111'320.0 * std::cos(o.lat / deg));
-                fix.altitude = o.alt + 47.0 + alt;  // MAVROS reports ellipsoid height (L8)
+                fix.altitude = o.alt + 47.0 + alt;  // MAVROS reports ellipsoid height
                 put(writer, fix, o.ns + "/mavros/global_position/global", ns);
             }
             if (step % 50 == 0) {
@@ -232,7 +232,7 @@ int main(int argc, char** argv) {
             gp.lon = o.lon + east / (111'320.0 * std::cos(o.lat / deg));
             gp.alt = float(o.alt + alt);
             gp.alt_ellipsoid =
-                float(o.alt + 47.0 + alt);  // Munich: ellipsoid is ~47 m above AMSL (L8)
+                float(o.alt + 47.0 + alt);  // Munich: ellipsoid is ~47 m above AMSL
             gp.lat_lon_valid = gp.alt_valid = true;
             put(writer, gp, o.ns + "/fmu/out/vehicle_global_position", ns);
         }
