@@ -28,7 +28,15 @@ async function init(token) {
 
   if (hasToken) {
     try {
-      tileset = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);   // Google Photorealistic 3D Tiles
+      // Google Photorealistic 3D Tiles; coarser away from the screen centre (not a hard radius).
+      tileset = await Cesium.Cesium3DTileset.fromIonAssetId(2275207, {
+        maximumScreenSpaceError: 24,
+        foveatedConeSize: 0.15,
+        foveatedTimeDelay: 0,
+        dynamicScreenSpaceErrorDensity: 0.00004,
+        cacheBytes: 256 * 1024 * 1024,
+        maximumCacheOverflowBytes: 128 * 1024 * 1024,
+      });
       viewer.scene.primitives.add(tileset);
       console.log("STATUS Google 3D Tiles: loading");
       tileset.allTilesLoaded.addEventListener(() => console.log("STATUS Google 3D Tiles: loaded"));

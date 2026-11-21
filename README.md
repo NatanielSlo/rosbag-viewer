@@ -31,6 +31,6 @@ then `scripts/dev run [bag]` (a rosbag2 folder; or Ctrl+O in the app). Other com
 
 The earlier Electron/Python prototype is kept at the git tag `prototype-electron`.
 
-**Credits:** the drone model in the 3D view is "CesiumDrone" by Ed Mackey (Analytical Graphics /
+**Credits:** the drone model in the 3D view is "CesiumDrone" (simplified material) by Ed Mackey (Analytical Graphics /
 Cesium), CC-BY 4.0 (`ws/src/viewer/web/models/CREDITS.txt`). It is a placeholder until the team has
 its own model.
