@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
 
         // position and attitude truth
         double alt = 0, north = start.north, east = start.east, vN = 0, vE = 0, vD = 0,
-               yaw = shapeAt(o.shape, 0, o.radius, omega).yaw;
+               yaw = start.yaw;
         if (t >= plan.climbAt) {
             const double up = std::min(plan.altitude, (t - plan.climbAt) * plan.climbRate);
             alt = up;
@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
         if (o.gps && step % 5 == 0) {  // 10 Hz
             msg::VehicleGlobalPosition gp;
             gp.timestamp = gp.timestamp_sample = us;
-            gp.lat = o.lat + north / 111'320.0 * 1.0;
+            gp.lat = o.lat + north / 111'320.0;
             gp.lon = o.lon + east / (111'320.0 * std::cos(o.lat / deg));
             gp.alt = float(o.alt + alt);
             gp.alt_ellipsoid =
@@ -247,7 +247,7 @@ int main(int argc, char** argv) {
         if (step % 25 == 0) {  // 2 Hz
             msg::VehicleStatus vs;
             vs.timestamp = us;
-            const bool armed = t >= plan.armAt && alt + t * 0 >= 0 && !(t > o.duration - 0.1);
+            const bool armed = t >= plan.armAt && !(t > o.duration - 0.1);
             vs.arming_state = armed ? msg::VehicleStatus::ARMING_STATE_ARMED
                                     : msg::VehicleStatus::ARMING_STATE_DISARMED;
             vs.nav_state = t < plan.armAt    ? msg::VehicleStatus::NAVIGATION_STATE_MANUAL

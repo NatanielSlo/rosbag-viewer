@@ -1,10 +1,10 @@
 #include "bag/bagsource.h"
 
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <memory>
 
-#include <cmath>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <mavros_msgs/msg/state.hpp>
@@ -241,8 +241,7 @@ FlightData loadFlight(const std::string& path) {
                 } else if (k.rest == "battery") {
                     d.topics.battery = topic;
                     const auto bs = deserialize<sensor_msgs::msg::BatteryState>(*m);
-                    if (std::isfinite(bs.percentage) && bs.percentage >= 0.f &&
-                        bs.percentage <= 1.f)
+                    if (bs.percentage >= 0.f && bs.percentage <= 1.f)  // NaN = unknown
                         d.batteryRemaining.add(t, bs.percentage);
                     if (std::isfinite(bs.voltage) && bs.voltage > 0.f)
                         d.batteryVoltage.add(t, bs.voltage);
@@ -273,7 +272,6 @@ FlightData loadFlight(const std::string& path) {
         Source* pos = pick(d, [](const Source& s) { return !s.positions.empty(); });
         if (pos) {
             Source* att = pick(d, [](const Source& s) { return !s.attitudes.empty(); });
-            if (att == nullptr || att->attitudes.empty()) att = nullptr;
             for (const auto& [t, p] : pos->positions) {
                 // attitude may come on its own topic, possibly from the other flavor
                 const auto a = att ? att->attitudes.poseAt(t) : std::nullopt;

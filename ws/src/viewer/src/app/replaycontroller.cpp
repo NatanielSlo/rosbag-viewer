@@ -78,8 +78,8 @@ void ReplayController::open(const QString& path) {
     } else {
         loaded_ = true;
     }
-    name_ = QFileInfo(path).completeBaseName().isEmpty() ? QFileInfo(path).fileName()
-                                                         : QFileInfo(path).completeBaseName();
+    const QFileInfo fi(path);
+    name_ = fi.completeBaseName().isEmpty() ? fi.fileName() : fi.completeBaseName();
     droneIndex_ = 0;
     clock_.setRange(0, d_->flight.durationSeconds);
     clock_.seek(0);
@@ -90,7 +90,7 @@ void ReplayController::open(const QString& path) {
 }
 
 const DroneTrack* ReplayController::track() const {
-    if (!loaded_ || droneIndex_ < 0 || droneIndex_ >= int(d_->keys.size())) return nullptr;
+    if (!loaded_) return nullptr;
     return &d_->flight.drones.at(d_->keys[droneIndex_]);
 }
 
@@ -100,7 +100,7 @@ bool ReplayController::hasGps() const {
 }
 
 void ReplayController::setDroneIndex(int i) {
-    if (!loaded_ || d_->keys.empty()) return;
+    if (!loaded_) return;
     const int n = int(d_->keys.size());
     droneIndex_ = ((i % n) + n) % n;
     emit droneChanged();
@@ -150,9 +150,10 @@ void ReplayController::setSpeed(double s) {
 void ReplayController::speedStep(int dir) {
     const double cur = std::abs(clock_.speed());
     int idx = 2;
-    for (int i = 0; i < 7; ++i)
+    const int n = int(std::size(kSpeeds));
+    for (int i = 0; i < n; ++i)
         if (std::abs(kSpeeds[i] - cur) < 1e-9) idx = i;
-    idx = std::clamp(idx + dir, 0, 6);
+    idx = std::clamp(idx + dir, 0, n - 1);
     setSpeed(clock_.speed() < 0 ? -kSpeeds[idx] : kSpeeds[idx]);
 }
 
